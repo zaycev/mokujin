@@ -16,4 +16,4 @@
 
 1. [Hamshahri Collection V2](http://ece.ut.ac.ir/dbrg/Hamshahri/download.html#version2)
 
-### Eglish
+### English
