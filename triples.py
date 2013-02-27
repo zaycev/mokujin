@@ -19,19 +19,18 @@ class SubjectTriplePattern(AbsTriplePattern):
         matches = []
         for pred in sentence:
             if pred.pos == "vb" and pred.args.second:
-                subjects = sentence.index.get(pred.args.second)
-                if subjects:
-                    for subj in subjects:
-                        if subj.pos == "nn":
+                subjects = sentence.index.get(pred.args.second, [])
+                for subj in subjects:
+                    if subj.pos == "nn":
 
-                            if len(subj.lemma) == 2:
-                                pass
-                                # print "%r %r" % (pred, subj)
-                                # print "%r" % subj
-                                # print sentence.line.encode("utf-8")
-                                # print
-                            # else:
-                            #     print subj.lemma.encode("utf-8")
-                            else:
-                                matches.append((pred.lemma, subj.lemma))
+                        if len(subj.lemma) == 2:
+                            pass
+                            # print "%r %r" % (pred, subj)
+                            # print "%r" % subj
+                            # print sentence.line.encode("utf-8")
+                            # print
+                        # else:
+                        #     print subj.lemma.encode("utf-8")
+                        else:
+                            matches.append((pred.lemma, subj.lemma))
         return matches
