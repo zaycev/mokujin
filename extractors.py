@@ -11,14 +11,16 @@ from collections import Counter
 
 class Predicate(object):
 
-    def __init__(self, pid, lemma, pos, args):
+    def __init__(self, pid, lemma, pos, args, extra=None):
         self.pid = pid
         self.lemma = lemma
         self.pos = pos
         self.args = self.Args(args)
+        self.extra = extra
 
     @staticmethod
     def fromstr(line, line_index):
+        # TODO(zaytsev@usc.edu): use line_index
         pid, other = line.split(":")
         result = other.split("-")
         # handling cases such as "торгово-развлекательный-adj"
@@ -30,15 +32,30 @@ class Predicate(object):
         pos, arg_line = other.split("(")
         arg_line = arg_line[0:(len(arg_line) - 1)]
         args = arg_line.split(",")
-        return Predicate(line_index, lemma, pos, args)
+        return Predicate(pid, lemma, pos, args)
+
+    @staticmethod
+    def efromstr(line, line_index):
+        # TODO(zaytsev@usc.edu): use line_index
+        extra, arg_line = line.split("(")
+        arg_line = arg_line[0:(len(arg_line) - 1)]
+        args = arg_line.split(",")
+        return Predicate(-1, "-NONE-", "-NONE-", args, extra)
 
     def __repr__(self):
-        predicate_str = u"[%d]-%s-%s(%s)" % (
-            self.pid,
-            self.lemma,
-            self.pos,
-            ", ".join(self.args)
-        )
+        if self.extra is None:
+            predicate_str = u"[%d]-%s-%s(%s)" % (
+                self.pid,
+                self.lemma,
+                self.pos,
+                ", ".join(self.args)
+            )
+        else:
+            predicate_str = u"%s(%s)" % (
+                self.extra,
+                ", ".join(self.args)
+            )
+        
         return predicate_str.encode("utf-8")
 
     class Args(object):
@@ -115,6 +132,9 @@ class Sentence(object):
                 predicate = Predicate.fromstr(p_str, i)
                 if len(predicate.lemma) > 1:
                     predicates.append(predicate)
+            else:
+                predicate = Predicate.efromstr(p_str, i)
+                predicates.append(predicate)
 
         return Sentence(lf_line_index, predicates, lf_line)
 
@@ -156,7 +176,10 @@ class TripleExtractor():
         for sent in i_sentences:
             matches = []
             for pattern in self.triple_patterns:
-                matches.extend(pattern.find_matches(sent))
+                matches.append((
+                    pattern.triple_class,
+                    pattern.find_matches(sent)
+                ))
             yield matches
 
 
@@ -165,14 +188,16 @@ class TripleFold(object):
     def __init__(self):
         self.counter = Counter()
 
-    def pack_triple(self, triple):
-        return "_AND_".join(triple)
+    def pack_triple(self, triples_class, triple):
+        return  triples_class + "_AND_" + "_AND_".join(triple)
 
     def unpack_triple(self, p_triple):
         return p_triple.split("_AND_")
 
-    def add_triples(self, triples):
-        self.counter.update(map(self.pack_triple, triples))
+    def add_triples(self, triples_class, triples):
+        for t in triples:
+            packed_triple = self.pack_triple(triples_class, t)
+            self.counter[packed_triple] += 1
 
     def i_triples(self):
         for p_triple, count in self.counter.most_common():
