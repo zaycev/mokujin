@@ -16,22 +16,28 @@ from triples import (
     IndirObjTriplePatern,
     AdjTriplePattern,
     AdvTriplePattern,
+    ComplTriplePattern,
     VerbGovTriplePattern,
+    AdvTriplePattern,
+    EqualPattern,
 )
 
 
 if __name__ == "__main__":
 
 
-    reader = MetaphorLF_Reader("parsed.txt")
+    reader = MetaphorLF_Reader("ruwac/sample.part1.lf.txt")
 
     ex = TripleExtractor(triple_patterns=[
-        # SubjectTriplePattern(),
-        # DirObjTriplePattern(),
-        # IndirObjTriplePatern(),
-        # AdjTriplePattern(),
-        # AdvTriplePattern(),
+        SubjectTriplePattern(),
+        DirObjTriplePattern(),
+        IndirObjTriplePatern(),
+        AdjTriplePattern(),
+        AdvTriplePattern(),
+        # ComplTriplePattern(),
         VerbGovTriplePattern(),
+        AdvTriplePattern(),
+        EqualPattern(),
     ])
 
     i_sents = reader.i_sentences()

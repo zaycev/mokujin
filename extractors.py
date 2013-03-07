@@ -20,16 +20,34 @@ class Predicate(object):
 
     @staticmethod
     def fromstr(line, line_index):
+        import sys
         # TODO(zaytsev@usc.edu): use line_index
-        pid, other = line.split(":")
-        result = other.split("-")
-        # handling cases such as "торгово-развлекательный-adj"
-        if len(result) > 2:
-            other = result[-1]
-            lemma = "-".join(result[0:(len(result) - 1)])
+        result = line.split(":")
+        if len(result) != 2:
+            pid = result[0]
+            other = result[1:len(result)]
+            other = "".join(other)
+            # aaa = other
+            # ooo = result
+            # xxx = len(result) - 1
+            # if other == "http://www.example.com/my-picture.gif.-in(e3,x2,x3)":
+            #     sys.stderr.write("YES")
         else:
-            lemma, other = result
-        pos, arg_line = other.split("(")
+            pid, other = line.split(":")
+        result = other.split("-")
+        if len(result) != 2:
+            other = result[-1]
+            lemma = "-".join(result[0:len(result)])
+        else:
+            lemma, other = result        
+
+        try:
+            pos, arg_line = other.split("(")
+        except:
+            import sys
+            sys.stderr.write(str(ooo))
+            exit(0)
+
         arg_line = arg_line[0:(len(arg_line) - 1)]
         args = arg_line.split(",")
         return Predicate(pid, lemma, pos, args)
@@ -37,15 +55,20 @@ class Predicate(object):
     @staticmethod
     def efromstr(line, line_index):
         # TODO(zaytsev@usc.edu): use line_index
-        extra, arg_line = line.split("(")
+        result = line.split("(")
+        if result == 2:
+            extra, arg_line = result
+        else:
+            extra = result[0:(len(result) - 1)]
+            arg_line = result[-1]
         arg_line = arg_line[0:(len(arg_line) - 1)]
         args = arg_line.split(",")
-        return Predicate(-1, "-NONE-", "-NONE-", args, extra)
+        return Predicate(-1, "-NONE-", "-NONE-", args, extra[0])
 
     def __repr__(self):
         if self.extra is None:
-            predicate_str = u"[%d]-%s-%s(%s)" % (
-                self.pid,
+            predicate_str = u"%s-%s(%s)" % (
+                # self.pid,
                 self.lemma,
                 self.pos,
                 ", ".join(self.args)
@@ -99,6 +122,7 @@ class Sentence(object):
         self.predicates = predicates
         self.sid = sid
         self.index = Sentence.index_predicates(predicates)
+        self.index2 = Sentence.index_all(predicates)
 
     @staticmethod
     def index_predicates(predicates):
@@ -121,6 +145,19 @@ class Sentence(object):
                 else:
                     inv_index[pred.args.first].append(pred)
 
+        return inv_index
+
+    @staticmethod
+    def index_all(predicates):
+        inv_index = dict()
+        for pred in predicates:
+            if pred.pos in ("nn", "vb", "pr", "adj"):
+                for arg in pred.args:
+                    if arg[0] != "u":
+                        if arg not in inv_index:
+                            inv_index[arg] = [pred]
+                        else:
+                            inv_index[arg].append(pred)
         return inv_index
 
     @staticmethod
