@@ -27,17 +27,17 @@ class SubjectTriplePattern(AbsTriplePattern):
                 for subj in subjects:
                     if subj.pos == "nn":
 
-                        if len(subj.lemma) < 3:
-                            pass
+                        # if len(subj.lemma) < 3:
+                            # pass
                             # TODO(zaytsev@usc.edu): fix issue with zero-length lemmas
-                            # print "%r %r" % (pred, subj)
-                            # print "%r" % subj
-                            # print sentence.line.encode("utf-8")
-                            # print
-                        # else:
+                        #     print "%r %r" % (pred, subj)
+                        #     print "%r" % subj
+                        #     print sentence.line.encode("utf-8")
+                        #     print
+                        # # else:
                         #     print subj.lemma.encode("utf-8")
-                        else:
-                            matches.append((pred.lemma, subj.lemma))
+                        # else:
+                        matches.append((pred.lemma, subj.lemma))
         return matches
 
 
@@ -101,35 +101,65 @@ class AdvTriplePattern(AbsTriplePattern):
         return matches
 
 
-# class ComplTriplePattern(AbsTriplePattern):
-#     triple_class = "compl"
-# 
-#     def find_matches(self, sentence):
-#         matches = []
-#         for pred in sentence:
-#             if pred.extra == "compl" and pred.args.second and pred.args.third:
-#                 nouns = sentence.index.get(pred.args.second, [])
-#                 
-#                 
-#                 for vb in verbs:
-#                     if vb.pos == "vb":
-#                         if len(vb.lemma) > 2:
-#                             matches.append((pred.lemma, vb.lemma))
-#         return matches
+class ComplTriplePattern(AbsTriplePattern):
+    triple_class = "compl"
+
+    def find_matches(self, sentence):
+        matches = []
+        for pred in sentence:
+            if pred.extra == "compl":
+                nouns = sentence.index2.get(pred.args.second, [])
+                adjvs = sentence.index2.get(pred.args.third, [])
+                for nn in nouns:
+                    for adj in adjvs:
+                        if adj.pos == "adj" and nn.pos == "nn":# and \
+                           # adj.args.first == pred.args.second and \
+                           # nn.args.first == pred.args.third:
+                            matches.append((adj.lemma, nn.lemma))
+        return matches
 
 
 class VerbGovTriplePattern(AbsTriplePattern):
     triple_class = "verb_gov"
 
     def find_matches(self, sentence):
+        # TODO(zaytsev@usc.edu): fix error with dublicates
         matches = []
         for pred in sentence:
-            if pred.extra == "compl" and pred.args.second and pred.args.third:
-                print "%r" % pred
-                verbs1 = sentence.index.get(pred.args.second, [])
-                verbs2 = sentence.index.get(pred.args.third, [])
-                for vb1 in verbs1:
-                        print vb1.pos, vb2.pos
-                        if vb1.pos == "vb" and vb2.pos == "vb":
-                            matches.append((vb1.lemma, vb2.lemma))
+            if pred.pos == "vb":
+                verbs2 = sentence.index2.get(pred.args.second, [])
+                for vb in verbs2:
+                    if vb != pred and vb.pos == "vb" and vb.args.second == pred.args.second:
+                        matches.append((pred.lemma, vb.lemma))
         return matches
+
+
+class AdvTriplePattern(AbsTriplePattern):
+    triple_class = "adv"
+    
+    def find_matches(self, sentence):
+        # TODO(zaytsev@usc.edu): fix error with dublicates
+        matches = []
+        for pred in sentence:
+            if pred.pos == "rb":
+                verbs = sentence.index.get(pred.args.second, [])
+                for vb in verbs:
+                    if vb.pos == "vb":
+                        matches.append((pred.lemma, vb.lemma))
+        return matches
+
+class EqualPattern(AbsTriplePattern):
+    triple_class = "equal"
+    
+    def find_matches(self, sentence):
+        matches = []
+        for pred in sentence:
+            if pred.extra == "equal":
+                nouns1 = sentence.index.get(pred.args.second, [])
+                nouns2 = sentence.index.get(pred.args.third, [])
+                for nn1 in nouns1:
+                    for nn2 in nouns2:
+                        if nn1 != nn2:
+                            matches.append((nn1.lemma, nn2.lemma))
+        return matches
+    
