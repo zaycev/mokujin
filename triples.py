@@ -345,13 +345,14 @@ class DepAdv_VerbNounAdv(AbsDependencyRelation):
     def find_matches(self, sentence):
         matches = []
         for adv in sentence.index.find(pos=POS.RB):
-            if adv.args.second:
+            preps1 = sentence.index.find(second=adv.args.first, pos=POS.PREP)
+            preps2 = sentence.index.find(third=adv.args.first, pos=POS.PREP)
+            if len(preps1) == 0 and len(preps2) == 0:
                 verbs = sentence.index.find(first=adv.args.second, pos=POS.VB)
                 for verb in verbs:
-                    if verb.args.second:
-                        nouns = sentence.index.find(second=verb.args.second, pos=POS.NN)
-                        if len(nouns) > 0:
-                            matches.append(Triple(self.rel_name, adv, verb))
+                    nouns = sentence.index.find(second=verb.args.second, pos=POS.NN)
+                    for noun in nouns:
+                        matches.append(Triple(self.rel_name, adv, verb, noun))
         return matches
 
 
