@@ -1,0 +1,317 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# Copyright (C) USC Information Sciences Institute
+# Author: Vladimir M. Zaytsev <zaytsev@usc.edu>
+# URL: <http://nlg.isi.edu/>
+# For more information, see README.md
+# For license information, see LICENSE
+
+
+class POS(object):
+
+    VB = 0x01
+    NN = 0x02
+    ADJ = 0x03
+    RB = 0x04
+    PREP = 0x05
+    PR = 0x06
+
+
+class Args(object):
+
+    def __init__(self, arg_list):
+        self.arg_list = [False] * len(arg_list)
+        for i, arg in enumerate(arg_list):
+            if arg and arg[0] != "u":
+                self.arg_list[i] = arg
+
+    @property
+    def first(self):
+        if len(self.arg_list) > 0:
+            return self.arg_list[0]
+        return False
+
+    @property
+    def second(self):
+        if len(self.arg_list) > 1:
+            return self.arg_list[1]
+        return False
+
+    @property
+    def third(self):
+        if len(self.arg_list) > 2:
+            return self.arg_list[2]
+        return False
+
+    @property
+    def fourth(self):
+        if len(self.arg_list) > 3:
+            return self.arg_list[3]
+        return False
+
+    def __iter__(self):
+        for arg in self.arg_list:
+            yield arg
+
+
+class Pos(object):
+
+    def __init__(self, pos_tag=None):
+        self.pos = None
+        if pos_tag == "vb":
+            self.vb = True
+            self.pos = POS.VB
+        else:
+            self.vb = False
+        if pos_tag == "nn":
+            self.nn = True
+            self.pos = POS.NN
+        else:
+            self.nn = False
+        if pos_tag == "adj":
+            self.adj = True
+            self.pos = POS.ADJ
+        else:
+            self.adj = False
+        if pos_tag == "rb":
+            self.rb = True
+            self.pos = POS.RB
+        else:
+            self.rb = False
+        if pos_tag == "in":
+            self.prep = True
+            self.pos = POS.PREP
+        else:
+            self.prep = False
+        if pos_tag == "pr":
+            self.pr = True
+            self.pos = POS.PR
+        else:
+            self.pr = False
+
+    def __repr__(self):
+        if self.vb:
+            return "VB"
+        if self.nn:
+            return "NN"
+        if self.adj:
+            return "ADJ"
+        if self.rb:
+            return "RB"
+        if self.prep:
+            return "PREP"
+        if self.pr:
+            return "PR"
+        return "<NONE>"
+
+
+class Predicate(object):
+
+    def __init__(self, pid=None, lemma=None, pos=None, args=None, extra=None, none=False):
+        self.none = none
+        if not none:
+            self.pid = pid
+            self.lemma = lemma
+            self.pos = Pos(pos)
+            self.args = Args(args)
+            self.extra = extra
+        else:
+            self.pid = None
+            self.lemma = None
+            self.pos = None
+            self.args = None
+            self.extra = None
+
+    def lemma_pos(self):
+        if self.none:
+            return "<NONE>"
+        return u"%s-%s" % (self.lemma, self.pos)
+
+    @staticmethod
+    def fromstr(line, line_index):
+        import sys
+        # TODO(zaytsev@usc.edu): use line_index somehow
+        result = line.split(":")
+        if len(result) != 2:
+            pid = result[0]
+            other = result[1:len(result)]
+            other = "".join(other)
+            # aaa = other
+            # ooo = result
+            # xxx = len(result) - 1
+            # if other == "http://www.example.com/my-picture.gif.-in(e3,x2,x3)":
+            #     sys.stderr.write("YES")
+        else:
+            pid, other = line.split(":")
+        result = other.split("-")
+        if len(result) != 2:
+            other = result[-1]
+            lemma = "-".join(result[0:len(result) - 1])
+        else:
+            lemma, other = result
+
+        # try:
+        pos, arg_line = other.split("(")
+        # except:
+        #     import sys
+        #     sys.stderr.write(str(ooo))
+        #     exit(0)
+
+        arg_line = arg_line[0:(len(arg_line) - 1)]
+        args = arg_line.split(",")
+        return Predicate(pid, lemma, pos, args)
+
+    @staticmethod
+    def efromstr(line, line_index):
+        # TODO(zaytsev@usc.edu): use line_index
+        result = line.split("(")
+        if result == 2:
+            extra, arg_line = result
+        else:
+            extra = result[0:(len(result) - 1)]
+            arg_line = result[-1]
+        arg_line = arg_line[0:(len(arg_line) - 1)]
+        args = arg_line.split(",")
+        return Predicate(-1, None, None, args, extra[0])
+
+    def __repr__(self):
+        if self.extra is None:
+            predicate_str = u"%s-%s(%s)" % (
+                # self.pid,
+                self.lemma,
+                self.pos,
+                u", ".join(self.args)
+            )
+        else:
+            predicate_str = u"%s(%s)" % (
+                self.extra,
+                u", ".join(self.args)
+            )
+
+        return predicate_str.encode("utf-8")
+
+
+class SentenceIndex(object):
+
+    def __init__(self, sentence):
+
+        self.i_dic_arg = dict()
+        self.i_dic_arg_first = dict()
+        self.i_dic_arg_second = dict()
+        self.i_dic_arg_third = dict()
+        self.i_dic_arg_fourth = dict()
+        self.i_dic_extra = dict()
+        self.sentence = sentence
+
+        for pred in sentence:
+            for arg in pred.args:
+                if arg in self.i_dic_arg:
+                    self.i_dic_arg[arg].append(pred)
+                else:
+                    self.i_dic_arg[arg] = [pred]
+            if pred.extra:
+                if pred.extra in self.i_dic_extra:
+                    self.i_dic_extra[pred.extra].append(pred)
+                else:
+                    self.i_dic_extra[pred.extra] = [pred]
+            if pred.args.first:
+                if pred.args.first in self.i_dic_arg_first:
+                    self.i_dic_arg_first[pred.args.first].append(pred)
+                else:
+                    self.i_dic_arg_first[pred.args.first] = [pred]
+            if pred.args.second:
+                if pred.args.second in self.i_dic_arg_second:
+                    self.i_dic_arg_second[pred.args.second].append(pred)
+                else:
+                    self.i_dic_arg_second[pred.args.second] = [pred]
+            if pred.args.third:
+                if pred.args.third in self.i_dic_arg_third:
+                    self.i_dic_arg_third[pred.args.third].append(pred)
+                else:
+                    self.i_dic_arg_third[pred.args.third] = [pred]
+            if pred.args.fourth:
+                if pred.args.fourth in self.i_dic_arg_fourth:
+                    self.i_dic_arg_fourth[pred.args.fourth].append(pred)
+                else:
+                    self.i_dic_arg_fourth[pred.args.fourth] = [pred]
+
+    def find(self, first=None, second=None, third=None, fourth=None, pos=None, arg=None, extra=None):
+        predicate_lists = []
+        if arg:
+            predicate_lists.append(self.i_dic_arg.get(arg, []))
+        if extra:
+            predicate_lists.append(self.i_dic_extra.get(extra, []))
+        if first:
+            predicate_lists.append(self.i_dic_arg_first.get(first, []))
+        if second:
+            predicate_lists.append(self.i_dic_arg_second.get(second, []))
+        if third:
+            predicate_lists.append(self.i_dic_arg_third.get(third, []))
+        if fourth:
+            predicate_lists.append(self.i_dic_arg_fourth.get(fourth, []))
+        if pos:
+            predicate_lists.append(filter(lambda p: p.pos.pos == pos, self.sentence))
+        if len(predicate_lists) == 1:
+            return predicate_lists[0]
+        else:
+            list1 = predicate_lists.pop()
+            matched = []
+            for e in list1:
+                in_intersection = True
+                for l in predicate_lists:
+                    if e not in l:
+                        in_intersection = False
+                        break
+                if in_intersection:
+                    matched.append(e)
+            return matched
+
+
+class Sentence(object):
+
+    def __init__(self, sid, predicates, line=None):
+        self.line = line
+        self.predicates = predicates
+        self.sid = sid
+        self.index = SentenceIndex(self)
+
+    @staticmethod
+    def from_lf_line(lf_line_index, lf_line):
+        predicates = []
+        predicate_str = filter(lambda t: t != "&", lf_line.split(" "))
+        for i, p_str in enumerate(predicate_str):
+            if p_str[0] == "[":
+                predicate = Predicate.fromstr(p_str, i)
+                if len(predicate.lemma) > 1:
+                    predicates.append(predicate)
+            else:
+                predicate = Predicate.efromstr(p_str, i)
+                predicates.append(predicate)
+
+        return Sentence(lf_line_index, predicates, lf_line)
+
+    def __iter__(self):
+        for pred in self.predicates:
+            yield pred
+
+
+class MetaphorLF_Reader(object):
+
+    def __init__(self, lf_file):
+        self.lf_file = lf_file
+
+    def i_sentences(self):
+        i = 0
+        for line in self.lf_file:
+            line = line.decode("utf-8")
+            if line[0] == "%":
+                continue
+            elif line[0:3] == "id(":
+                continue
+            elif len(line) > 1:
+                sentence = Sentence.from_lf_line(i, line)
+                i += 1
+                yield sentence
+            else:
+                continue

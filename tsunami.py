@@ -9,35 +9,54 @@
 
 import sys
 
-from extractors import MetaphorLF_Reader, TripleExtractor, TripleFold
+from logicalform import MetaphorLF_Reader
+from triples import TripleExtractor, TripleFold, Triple
 from triples import (
-    SubjectTriplePattern,
-    DirObjTriplePattern,
-    IndirObjTriplePatern,
-    AdjTriplePattern,
-    AdvTriplePattern,
-    ComplTriplePattern,
-    VerbGovTriplePattern,
-    AdvTriplePattern,
-    EqualPattern,
+    DepVerb_SubjVerbDirobj,
+    DepVerb_SubjVerbIndirobj,
+    DepVerb_SubjVerbInstr,
+    DepVerb_SubjVerb,
+    DepVerb_PrepCompl,
+    DepVerb_VerbPrepNoun,
+    DepVerb_Verb,
+    DepAdj_NounBePrepNoun,
+    DepAdj_NounAdj,
+    DepAdv_NounVerbAdvPrepNoun,
+    DepAdv_VerbNounAdv,
+    DepNoun_NounPrep,
+    DepNoun_NounNoun,
+    DepNoun_NounEqualPrepNoun,
+    DepNoun_NounEqualNoun,
+    DepNoun_NounPrepNoun,
+    DepAny_Compl,
 )
 
 
 if __name__ == "__main__":
 
+    ifile = sys.stdin
+    ofile = sys.stdout
 
-    reader = MetaphorLF_Reader("ruwac/sample.part1.lf.txt")
+    reader = MetaphorLF_Reader(ifile)
 
     ex = TripleExtractor(triple_patterns=[
-        SubjectTriplePattern(),
-        DirObjTriplePattern(),
-        IndirObjTriplePatern(),
-        AdjTriplePattern(),
-        AdvTriplePattern(),
-        # ComplTriplePattern(),
-        VerbGovTriplePattern(),
-        AdvTriplePattern(),
-        EqualPattern(),
+        DepVerb_SubjVerbDirobj(),
+        DepVerb_SubjVerbIndirobj(),
+        DepVerb_SubjVerbInstr(),
+        DepVerb_SubjVerb(),
+        DepVerb_PrepCompl(),
+        DepVerb_VerbPrepNoun(),
+        DepVerb_Verb(),
+        DepAdj_NounBePrepNoun(),
+        DepAdj_NounAdj(),
+        DepAdv_NounVerbAdvPrepNoun(),
+        DepAdv_VerbNounAdv(),
+        DepNoun_NounPrep(),
+        DepNoun_NounNoun(),
+        DepNoun_NounEqualPrepNoun(),
+        DepNoun_NounEqualNoun(),
+        DepNoun_NounPrepNoun(),
+        DepAny_Compl(),
     ])
 
     i_sents = reader.i_sentences()
@@ -46,13 +65,14 @@ if __name__ == "__main__":
 
     tfold = TripleFold()
     
-    for tset in i_triple_sets:
-        for t_class, triples in tset:
-            tfold.add_triples(t_class, triples)
+    for triples in i_triple_sets:
+        tfold.add_triples(triples)
 
-    result = tfold.i_triples()
+    triples = tfold.i_triples()
 
-    for triple_info in result:
-        sys.stdout.write(", ".join([unicode(tf).encode("utf-8")
-                                    for tf in triple_info]))
-        sys.stdout.write("\n")
+    for triple_tuple in triples:
+        ofile.write(Triple.to_row(triple_tuple).encode("utf-8"))
+        ofile.stdout.write("\n")
+
+    ifile.close()
+    ofile.close()
