@@ -17,8 +17,8 @@ from triples import (
     DepVerb_SubjVerbInstr,
     DepVerb_SubjVerb,
     DepVerb_PrepCompl,
-    DepVerb_VerbPrepNoun,
-    DepVerb_Verb,
+    DepVerb_SubjVerbVerbPrepNoun,
+    DepVerb_SubjVerbVerb,
     DepAdj_NounBePrepNoun,
     DepAdj_NounAdj,
     DepAdv_NounVerbAdvPrepNoun,
@@ -45,8 +45,8 @@ if __name__ == "__main__":
         DepVerb_SubjVerbInstr(),
         DepVerb_SubjVerb(),
         DepVerb_PrepCompl(),
-        DepVerb_VerbPrepNoun(),
-        DepVerb_Verb(),
+        DepVerb_SubjVerbVerbPrepNoun(),
+        DepVerb_SubjVerbVerb(),
         DepAdj_NounBePrepNoun(),
         DepAdj_NounAdj(),
         DepAdv_NounVerbAdvPrepNoun(),
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     for triple_tuple in triples:
         ofile.write(Triple.to_row(triple_tuple).encode("utf-8"))
-        ofile.stdout.write("\n")
+        ofile.write("\n")
 
     ifile.close()
     ofile.close()
