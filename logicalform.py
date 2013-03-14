@@ -103,7 +103,7 @@ class Pos(object):
             return "PREP"
         if self.pr:
             return "PR"
-        return "<NONE>"
+        return "<-NO-POS->"
 
 
 class Predicate(object):
@@ -129,19 +129,12 @@ class Predicate(object):
         return u"%s-%s" % (self.lemma, self.pos)
 
     @staticmethod
-    def fromstr(line, line_index):
-        import sys
-        # TODO(zaytsev@usc.edu): use line_index somehow
+    def fromstr(line):
         result = line.split(":")
         if len(result) != 2:
             pid = result[0]
             other = result[1:len(result)]
             other = "".join(other)
-            # aaa = other
-            # ooo = result
-            # xxx = len(result) - 1
-            # if other == "http://www.example.com/my-picture.gif.-in(e3,x2,x3)":
-            #     sys.stderr.write("YES")
         else:
             pid, other = line.split(":")
         result = other.split("-")
@@ -150,21 +143,13 @@ class Predicate(object):
             lemma = "-".join(result[0:len(result) - 1])
         else:
             lemma, other = result
-
-        # try:
         pos, arg_line = other.split("(")
-        # except:
-        #     import sys
-        #     sys.stderr.write(str(ooo))
-        #     exit(0)
-
         arg_line = arg_line[0:(len(arg_line) - 1)]
         args = arg_line.split(",")
         return Predicate(pid, lemma, pos, args)
 
     @staticmethod
-    def efromstr(line, line_index):
-        # TODO(zaytsev@usc.edu): use line_index
+    def efromstr(line):
         result = line.split("(")
         if result == 2:
             extra, arg_line = result
@@ -190,6 +175,18 @@ class Predicate(object):
             )
 
         return predicate_str.encode("utf-8")
+
+
+class PredicateSet(object):
+
+    def __init__(self, list_of_predicates, pos):
+        self.list_of_predicates = list_of_predicates
+        self.pos = pos
+
+    def lemma_pos(self):
+        lemmas = sorted([pred.lemma for pred in self.list_of_predicates])
+        lemmas = "&&".join(lemmas)
+        return "%s-%s" % (lemmas, self.pos)
 
 
 class SentenceIndex(object):
@@ -236,7 +233,7 @@ class SentenceIndex(object):
                 else:
                     self.i_dic_arg_fourth[pred.args.fourth] = [pred]
 
-    def find(self, first=None, second=None, third=None, fourth=None, pos=None, arg=None, extra=None):
+    def find(self, first=None, second=None, third=None, fourth=None, pos=None, arg=None, extra=None, return_set=False):
         predicate_lists = []
         if arg:
             predicate_lists.append(self.i_dic_arg.get(arg, []))
@@ -253,6 +250,8 @@ class SentenceIndex(object):
         if pos:
             predicate_lists.append(filter(lambda p: p.pos.pos == pos, self.sentence))
         if len(predicate_lists) == 1:
+            if return_set and pos:
+                return PredicateSet(predicate_lists[0], predicate_lists)
             return predicate_lists[0]
         else:
             list1 = predicate_lists.pop()
@@ -265,6 +264,8 @@ class SentenceIndex(object):
                         break
                 if in_intersection:
                     matched.append(e)
+            if return_set and pos is not None:
+                return PredicateSet(matched, pos)
             return matched
 
 
@@ -276,17 +277,23 @@ class Sentence(object):
         self.sid = sid
         self.index = SentenceIndex(self)
 
+    def lemmas(self):
+        lemmas = []
+        for p in self.predicates:
+            if p.lemma is not None:
+                lemmas.append(p.lemma)
+        return lemmas
+
     @staticmethod
     def from_lf_line(lf_line_index, lf_line):
         predicates = []
         predicate_str = filter(lambda t: t != "&", lf_line.split(" "))
         for i, p_str in enumerate(predicate_str):
             if p_str[0] == "[":
-                predicate = Predicate.fromstr(p_str, i)
-                if len(predicate.lemma) > 1:
-                    predicates.append(predicate)
+                predicate = Predicate.fromstr(p_str)
+                predicates.append(predicate)
             else:
-                predicate = Predicate.efromstr(p_str, i)
+                predicate = Predicate.efromstr(p_str)
                 predicates.append(predicate)
 
         return Sentence(lf_line_index, predicates, lf_line)
