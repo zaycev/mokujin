@@ -14,14 +14,9 @@ from logicalform import POS, Predicate
 class AbsDependencyRelation(object):
     triple_class = "abstract"
 
-    def together(self, lemma1, lemma2):
-        if lemma1 is None:
-            lemma1 = "N"
-        if lemma2 is None:
-            lemma2 = "N"
-        if lemma1 > lemma2:
-            return lemma2 + lemma1
-        return lemma1 + lemma2
+    def together(self, *args):
+        lemmas = ["N" if a is None else a for a in args]
+        return "".join(sorted(lemmas))
 
     def find_matches(self, sentence):
         raise NotImplementedError()
@@ -77,69 +72,61 @@ class Triple(object):
 class DepVerb_SubjVerbDirobj(AbsDependencyRelation):
     """
     Example:
-    subj_verb_dirobj(noun,verb,noun) ("John reads a book")
+    subj_verb_dirobj([noun*],verb,[noun+]) ("John reads a book")
     """
     rel_name = "subj_verb_dirobj"
 
     def find_matches(self, sentence):
         matches = []
         for verb in sentence.index.find(pos=POS.VB):
-            if verb.args.second and verb.args.third:
-                subjs = sentence.index.find(second=verb.args.second, pos=POS.NN)
-                dirobjs = sentence.index.find(second=verb.args.third, pos=POS.NN)
-                for subj in subjs:
-                    for dirobj in dirobjs:
-                        if subj != dirobj:
-                            matches.append(Triple(self.rel_name, subj, verb, dirobj))
+            subj = sentence.index.find(second=verb.args.second, pos=POS.NN, return_set=True)
+            dirobj = sentence.index.find(second=verb.args.third, pos=POS.NN, return_set=True)
+            if dirobj and subj != dirobj:
+                matches.append(Triple(self.rel_name, subj, verb, dirobj))
         return matches
 
 
 class DepVerb_SubjVerbIndirobj(AbsDependencyRelation):
     """
     Example:
-    subj_verb_indirobj(noun,verb,noun) ("John gives to Mary")
+    subj_verb_indirobj([noun*],verb,[noun+]) ("John gives to Mary")
     """
     rel_name = "subj_verb_indirobj"
 
     def find_matches(self, sentence):
         matches = []
         for verb in sentence.index.find(pos=POS.VB):
-            if verb.args.second and verb.args.fourth:
-                subjs = sentence.index.find(second=verb.args.second, pos=POS.NN)
-                indirobjs = sentence.index.find(second=verb.args.fourth, pos=POS.NN)
-                for subj in subjs:
-                    for indirobj in indirobjs:
-                        if subj != indirobj:
-                            matches.append(Triple(self.rel_name, subj, verb, indirobj))
+            if verb.args.fourth:
+                subj = sentence.index.find(second=verb.args.second, pos=POS.NN, return_set=True)
+                indirobj = sentence.index.find(second=verb.args.fourth, pos=POS.NN, return_set=True)
+                if indirobj and subj != indirobj:
+                    matches.append(Triple(self.rel_name, subj, verb, indirobj))
         return matches
 
 
 class DepVerb_SubjVerbInstr(AbsDependencyRelation):
     """
     Example:
-    subj_verb_instr(noun,verb,noun) ("Джон работает топором")
+    subj_verb_instr([noun*],verb,[noun+]) ("Джон работает топором")
     """
     rel_name = "subj_verb_instr"
 
     def find_matches(self, sentence):
         matches = []
         for verb in sentence.index.find(pos=POS.VB):
-            if verb.args.second and verb.args.fourth:
-                subjs = sentence.index.find(second=verb.args.second, pos=POS.NN)
-                instrs = sentence.index.find(second=verb.args.first, extra="instr")
-                for instr in instrs:
-                    instr_preds = sentence.index.find(second=instr.args.third, pos=POS.NN)
-                    for instr_pred in instr_preds:
-                        for subj in subjs:
-                            if subj != instr_pred:
-                                matches.append(Triple(self.rel_name, subj, verb, instr_pred))
+            subj = sentence.index.find(second=verb.args.second, pos=POS.NN, return_set=True)
+            instrs = sentence.index.find(second=verb.args.first, extra="instr")
+            for instr in instrs:
+                instr_noun = sentence.index.find(second=instr.args.third, pos=POS.NN, return_set=True)
+                if instr_noun and subj != instr_noun:
+                    matches.append(Triple(self.rel_name, subj, verb, instr_noun))
         return matches
 
 
 class DepVerb_SubjVerb(AbsDependencyRelation):
     """
     Example:
-    subj_verb(noun, verb) ("John runs") // only if there is no obj
+    subj_verb([noun+], verb) ("John runs") // only if there is no dirobj and indirobj
     """
     rel_name = "subj_verb"
 
@@ -147,8 +134,8 @@ class DepVerb_SubjVerb(AbsDependencyRelation):
         matches = []
         for verb in sentence.index.find(pos=POS.VB):
             if verb.args.second and not verb.args.third and not verb.args.fourth:
-                subjs = sentence.index.find(second=verb.args.second, pos=POS.NN)
-                for subj in subjs:
+                subj = sentence.index.find(second=verb.args.second, pos=POS.NN, return_set=True)
+                if subj:
                     matches.append(Triple(self.rel_name, subj, verb))
         return matches
 
@@ -156,7 +143,7 @@ class DepVerb_SubjVerb(AbsDependencyRelation):
 class DepVerb_PrepCompl(AbsDependencyRelation):
     """
     Example:
-    subj_verb_prep_compl(noun,verb,prep,noun) ("John comes from London")
+    subj_verb_prep_compl([noun*],verb,prep,[noun+]) ("John comes from London")
     """
     rel_name = "subj_verb_prep_compl"
 
@@ -164,13 +151,12 @@ class DepVerb_PrepCompl(AbsDependencyRelation):
         matches = []
         for verb in sentence.index.find(pos=POS.VB):
             if verb.args.second:
-                subjs = sentence.index.find(second=verb.args.second, pos=POS.NN)
-                preps = sentence.index.find(second=verb.args.first, pos=POS.PREP)
+                subj = sentence.index.find(second=verb.args.second, pos=POS.NN, return_set=True)
+                preps = sentence.index.find(second=verb.args.first)
                 for prep in preps:
-                    prep_nouns = sentence.index.find(second=prep.args.third, pos=POS.NN)
-                    for subj in subjs:
-                        for noun in prep_nouns:
-                            matches.append(Triple(self.rel_name, subj, verb, prep, noun))
+                    prep_noun = sentence.index.find(second=prep.args.third, pos=POS.NN, return_set=True)
+                    if prep_noun and subj != prep_noun:
+                        matches.append(Triple(self.rel_name, subj, verb, prep, prep_noun))
         return matches
 
 
@@ -186,7 +172,7 @@ class DepVerb_PrepPrepCompl(AbsDependencyRelation):
 class DepVerb_SubjVerbVerbPrepNoun(AbsDependencyRelation):
     """
     Example:
-    subj_verb_verb_prep_noun(noun,verb,verb,prep,noun) ("John tries to go into the house")
+    subj_verb_verb_prep_noun([noun*],verb,verb,prep,[noun+]) ("John tries to go into the house")
     """
     rel_name = "subj_verb_verb_prep_noun"
 
@@ -194,21 +180,19 @@ class DepVerb_SubjVerbVerbPrepNoun(AbsDependencyRelation):
         matches = []
         vb_pairs = []
         for verb1 in sentence.index.find(pos=POS.VB):
-            if verb1.args.second:
-                nouns1 = sentence.index.find(second=verb1.args.second, pos=POS.NN)
-                if len(nouns1) == 0:
-                    nouns1 = [Predicate(none=True)]
-                for noun1 in nouns1:
-                    verbs2 = sentence.index.find(first=verb1.args.third, pos=POS.VB)
-                    verbs2 = filter(lambda p: p != verb1, verbs2)
-                    for verb2 in verbs2:
+            if verb1.args.third:
+                subj = sentence.index.find(second=verb1.args.second, pos=POS.NN, return_set=True)
+                verbs2 = sentence.index.find(first=verb1.args.third, pos=POS.VB)
+                verbs2 = filter(lambda p: p != verb1, verbs2)
+                for verb2 in verbs2:
+                    if verb1 != verb2:
                         together = self.together(verb1.lemma, verb2.lemma)
                         if together not in vb_pairs:
-                            preps = sentence.index.find(second=verb1.args.first, pos=POS.PREP)
+                            preps = sentence.index.find(second=verb2.args.first, pos=POS.PREP)
                             for prep in preps:
-                                nouns2 = sentence.index.find(second=prep.args.third, pos=POS.NN)
-                                for noun2 in nouns2:
-                                    matches.append(Triple(self.rel_name, noun1, verb2, verb1, prep, noun2))
+                                prep_noun = sentence.index.find(second=prep.args.third, pos=POS.NN, return_set=True)
+                                if prep_noun and prep_noun != subj:
+                                    matches.append(Triple(self.rel_name, subj, verb1, verb2, prep, prep_noun))
                                     vb_pairs.append(together)
         return matches
 
@@ -216,7 +200,7 @@ class DepVerb_SubjVerbVerbPrepNoun(AbsDependencyRelation):
 class DepVerb_SubjVerbVerb(AbsDependencyRelation):
     """
     Example:
-    subj_verb_verb(noun,verb,verb) ("John tries to go") -> only if there is no prep attached to the second verb
+    subj_verb_verb([noun+],verb,verb) ("John tries to go") -> only if there is no prep attached to the second verb
     """
     rel_name = "subj_verb_verb"
 
@@ -225,19 +209,18 @@ class DepVerb_SubjVerbVerb(AbsDependencyRelation):
         vb_pairs = []
         for verb1 in sentence.index.find(pos=POS.VB):
             if verb1.args.second:
-                nouns1 = sentence.index.find(second=verb1.args.second, pos=POS.NN)
-                if len(nouns1) == 0:
-                    nouns1 = [Predicate(none=True)]
-                for noun1 in nouns1:
+                subject = sentence.index.find(second=verb1.args.second, pos=POS.NN, return_set=True)
+                if subject:
                     verbs2 = sentence.index.find(first=verb1.args.third, pos=POS.VB)
                     verbs2 = filter(lambda p: p != verb1, verbs2)
                     for verb2 in verbs2:
-                        together = self.together(verb1.lemma, verb2.lemma)
-                        if together not in vb_pairs:
-                            preps = sentence.index.find(second=verb1.args.first, pos=POS.PREP)
-                            if len(preps) == 0:
-                                matches.append(Triple(self.rel_name, noun1, verb2, verb1))
-                                vb_pairs.append(together)
+                        if verb1 != verb2:
+                            together = self.together(verb1.lemma, verb2.lemma)
+                            if together not in vb_pairs:
+                                preps = sentence.index.find(second=verb1.args.first, pos=POS.PREP)
+                                if len(preps) == 0:
+                                    matches.append(Triple(self.rel_name, subject, verb1, verb2))
+                                    vb_pairs.append(together)
         return matches
 
 
@@ -352,7 +335,7 @@ class DepAdv_NounVerbAdvPrepNoun(AbsDependencyRelation):
 class DepAdv_VerbNounAdv(AbsDependencyRelation):
     """
     Example:
-    noun_verb_adv(adverb,verb) ("John runs fast") -> only if there is no prep attached to adv
+    noun_verb_adv([noun*],verb,adverb) ("John runs fast") -> only if there is no prep attached to adv
     """
     rel_name = "noun_verb_adv"
 
@@ -364,9 +347,8 @@ class DepAdv_VerbNounAdv(AbsDependencyRelation):
             if len(preps1) == 0 and len(preps2) == 0:
                 verbs = sentence.index.find(first=adv.args.second, pos=POS.VB)
                 for verb in verbs:
-                    nouns = sentence.index.find(second=verb.args.second, pos=POS.NN)
-                    for noun in nouns:
-                        matches.append(Triple(self.rel_name, adv, verb, noun))
+                    subj = sentence.index.find(second=verb.args.second, pos=POS.NN, return_set=True)
+                    matches.append(Triple(self.rel_name, subj, verb, adv))
         return matches
 
 
@@ -380,27 +362,19 @@ class DepAdv_VerbNounAdv(AbsDependencyRelation):
 class DepNoun_NounPrep(AbsDependencyRelation):
     """
     Example:
-    nn_prep(noun,noun,prep,noun) ("city bike for John") -> only if "for" has "bike" (and not some verb) as its arg.
+    nn_prep([noun+],prep,noun) ("[city]&bike for John") -> only if "for" has "bike" (and not some verb) as its arg.
     """
     rel_name = "nn_prep"
 
     def find_matches(self, sentence):
         matches = []
-        nn_pairs = []
         for prep in sentence.index.find(pos=POS.PREP):
             if prep.args.second:
-                nouns1 = sentence.index.find(second=prep.args.second, pos=POS.NN)
-                for noun1 in nouns1:
-                    nouns2 = sentence.index.find(second=prep.args.second, pos=POS.NN)
-                    nouns2 = filter(lambda p: p != noun1, nouns2)
-                    for noun2 in nouns2:
-                        together = self.together(noun1.lemma, noun2.lemma)
-                        if together not in nn_pairs:
-                            nouns3 = sentence.index.find(second=prep.args.third, pos=POS.NN)
-                            for noun3 in nouns3:
-                                if noun3 != noun1 and noun3 != noun2:
-                                    matches.append(Triple(self.rel_name, noun2, noun1, prep, noun3))
-                                    nn_pairs.append(together)
+                comp_noun = sentence.index.find(second=prep.args.second, pos=POS.NN, return_set=True)
+                if len(comp_noun) > 0:
+                    pred_noun = sentence.index.find(second=prep.args.third, pos=POS.NN, return_set=True)
+                    if pred_noun and comp_noun != pred_noun:
+                        matches.append(Triple(self.rel_name, comp_noun, prep, pred_noun))
         return matches
 
 
@@ -419,11 +393,38 @@ class DepNoun_NounNoun(AbsDependencyRelation):
             if len(preps) == 0:
                 nouns2 = sentence.index.find(second=noun1.args.second, pos=POS.NN)
                 nouns2 = filter(lambda p: p != noun1, nouns2)
-                for noun2 in nouns2:
+                if len(nouns2) == 1:
+                    noun2 = nouns2[0]
                     together = self.together(noun1.lemma, noun2.lemma)
                     if together not in nn_pairs:
-                        matches.append(Triple(self.rel_name, noun1, noun2))
-                        nn_pairs.append(together)
+                        if noun1 != noun2:
+                            matches.append(Triple(self.rel_name, noun1, noun2))
+                            nn_pairs.append(together)
+        return matches
+
+
+class DepNoun_NounNounNoun(AbsDependencyRelation):
+    """
+    Example:
+    nnn(noun,noun,noun) ("Tzar Ivan Grozny")
+    """
+    rel_name = "nnn"
+
+    def find_matches(self, sentence):
+        matches = []
+        nn_triples = []
+        for noun1 in sentence.index.find(pos=POS.NN):
+            preps = sentence.index.find(second=noun1.args.second, pos=POS.PREP)
+            if len(preps) == 0:
+                nouns2 = sentence.index.find(second=noun1.args.second, pos=POS.NN)
+                nouns2 = filter(lambda p: p != noun1, nouns2)
+                if len(nouns2) == 2:
+                    noun2, noun3 = nouns2
+                    together = self.together(noun1.lemma, noun2.lemma, noun3.lemma)
+                    if together not in nn_triples:
+                        if noun1 != noun2 and noun2 != noun3 and noun1 != noun3:
+                            matches.append(Triple(self.rel_name, noun1, noun2, noun3))
+                            nn_triples.append(together)
         return matches
 
 
@@ -473,19 +474,14 @@ class DepNoun_NounEqualNoun(AbsDependencyRelation):
 
     def find_matches(self, sentence):
         matches = []
-        nn_pairs = []
         for equal in sentence.index.find(extra="equal"):
-            nouns1 = sentence.index.find(second=equal.args.second, pos=POS.NN)
-            for noun1 in nouns1:
-                nouns2 = sentence.index.find(second=equal.args.third, pos=POS.NN)
-                nouns2 = filter(lambda p: p != noun1, nouns2)
-                for noun2 in nouns2:
-                    together = self.together(noun1.lemma, noun2.lemma)
-                    if together not in nn_pairs:
-                        preps = sentence.index.find(second=noun2.args.second, pos=POS.PREP)
+            noun1 = sentence.index.find(second=equal.args.second, pos=POS.NN, return_set=True)
+            if noun1:
+                noun2 = sentence.index.find(second=equal.args.third, pos=POS.NN, return_set=True)
+                if noun2 and noun1 != noun2:
+                        preps = sentence.index.find(second=noun2.predicates[0].args.second, pos=POS.PREP)
                         if len(preps) == 0:
                             matches.append(Triple(self.rel_name, noun1, noun2))
-                            nn_pairs.append(together)
         return matches
 
 
@@ -536,16 +532,24 @@ class DepAny_Compl(AbsDependencyRelation):
 
     def find_matches(self, sentence):
         matches = []
-        any_pairs = []
         for compl in sentence.index.find(extra="compl"):
-            any_1s = sentence.index.find(first=compl.args.second)
-            any_1s = filter(lambda p: p != compl, any_1s)
+            any_1s = \
+                sentence.index.find(first=compl.args.second, pos=POS.VB) + \
+                sentence.index.find(first=compl.args.second, pos=POS.RB) + \
+                [sentence.index.find(first=compl.args.second, pos=POS.NN, return_set=True)] + \
+                [sentence.index.find(first=compl.args.second, pos=POS.ADJ, return_set=True)] + \
+                [sentence.index.find(second=compl.args.second, pos=POS.NN, return_set=True)] + \
+                [sentence.index.find(second=compl.args.second, pos=POS.ADJ, return_set=True)]
             for any_1 in any_1s:
-                any_2s = sentence.index.find(first=compl.args.third)
-                any_2s = filter(lambda p: p != any_1 and p != compl, any_2s)
+                any_2s = \
+                    sentence.index.find(first=compl.args.third, pos=POS.VB) + \
+                    sentence.index.find(first=compl.args.third, pos=POS.RB) + \
+                    [sentence.index.find(first=compl.args.third, pos=POS.NN, return_set=True)] + \
+                    [sentence.index.find(first=compl.args.third, pos=POS.ADJ, return_set=True)] + \
+                    [sentence.index.find(second=compl.args.third, pos=POS.NN, return_set=True)] + \
+                    [sentence.index.find(second=compl.args.third, pos=POS.ADJ, return_set=True)]
                 for any_2 in any_2s:
-                    together = self.together(any_1.lemma, any_2.lemma)
-                    if together not in any_pairs and any_1.lemma is not None and any_2.lemma is not None:
+                    if any_1 and any_2:
                         matches.append(Triple(self.rel_name, any_1, any_2))
         return matches
 
