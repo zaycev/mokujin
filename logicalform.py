@@ -10,6 +10,7 @@
 
 class POS(object):
 
+    NONE = 0x00
     VB = 0x01
     NN = 0x02
     ADJ = 0x03
@@ -58,7 +59,7 @@ class Args(object):
 class Pos(object):
 
     def __init__(self, pos_tag=None):
-        self.pos = None
+        self.pos = POS.NONE
         if pos_tag == "vb":
             self.vb = True
             self.pos = POS.VB
@@ -90,7 +91,23 @@ class Pos(object):
         else:
             self.pr = False
 
-    def __repr__(self):
+    @staticmethod
+    def fromenum(enum):
+        if enum == POS.VB:
+            return Pos("vb")
+        if enum == POS.NN:
+            return Pos("nn")
+        if enum == POS.ADJ:
+            return Pos("adj")
+        if enum == POS.RB:
+            return Pos("rb")
+        if enum == POS.PREP:
+            return Pos("in")
+        if enum == POS.PR:
+            return Pos("pr")
+        return Pos(None)
+
+    def __str__(self):
         if self.vb:
             return "VB"
         if self.nn:
@@ -103,7 +120,13 @@ class Pos(object):
             return "PREP"
         if self.pr:
             return "PR"
-        return "<-NO-POS->"
+        return "<NONE-POS>"
+
+    def __int__(self):
+        return self.pos
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class Predicate(object):
@@ -160,33 +183,74 @@ class Predicate(object):
         args = arg_line.split(",")
         return Predicate(-1, None, None, args, extra[0])
 
+    def __eq__(self, other):
+        if self.lemma is None:
+            return False
+        if other.lemma is None:
+            return False
+        return self.lemma == other.lemma
+
+    def __hash__(self):
+        return self.lemma.__hash__()
+
     def __repr__(self):
         if self.extra is None:
             predicate_str = u"%s-%s(%s)" % (
-                # self.pid,
                 self.lemma,
                 self.pos,
-                u", ".join(self.args)
+                u", ".join([str(arg) for arg in self.args])
             )
         else:
             predicate_str = u"%s(%s)" % (
                 self.extra,
-                u", ".join(self.args)
+                u", ".join([str(arg) for arg in self.args])
             )
-
         return predicate_str.encode("utf-8")
 
 
 class PredicateSet(object):
 
-    def __init__(self, list_of_predicates, pos):
-        self.list_of_predicates = list_of_predicates
-        self.pos = pos
+    def __init__(self, predicates, pos, max_sequence=4):
+        self.predicates = list(set(predicates)) if len(predicates) <= max_sequence else []
+        self.pos = Pos.fromenum(pos)
+
+    def lemmas(self):
+        return [pred.lemma for pred in self.predicates]
 
     def lemma_pos(self):
-        lemmas = sorted([pred.lemma for pred in self.list_of_predicates])
-        lemmas = "&&".join(lemmas)
-        return "%s-%s" % (lemmas, self.pos)
+        if len(self.predicates) > 0:
+            lemmas = sorted([pred.lemma for pred in self.predicates])
+            lemmas = "&&".join(lemmas)
+            return u"%s-%r" % (lemmas, self.pos)
+        return "<NONE>"
+
+    def __cmp__(self, other):
+        set1 = set(other.lemmas())
+        set2 = set(self.lemmas())
+        if set1 == set2:
+            return 0
+        return 1
+
+    def __eq__(self, other):
+        set1 = set(other.lemmas())
+        set2 = set(self.lemmas())
+        return set1 == set2
+
+    def __int__(self):
+        return len(self.predicates)
+
+    def __str__(self):
+        if list(self.predicates) == 0:
+            return "<NONE>"
+        else:
+            set_str = u"<PredicateSet(%s)>" % self.lemma_pos()
+        return set_str.encode("utf-8")
+
+    def __len__(self):
+        return len(self.predicates)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class SentenceIndex(object):
@@ -203,10 +267,11 @@ class SentenceIndex(object):
 
         for pred in sentence:
             for arg in pred.args:
-                if arg in self.i_dic_arg:
-                    self.i_dic_arg[arg].append(pred)
-                else:
-                    self.i_dic_arg[arg] = [pred]
+                if arg is not None:
+                    if arg in self.i_dic_arg:
+                        self.i_dic_arg[arg].append(pred)
+                    else:
+                        self.i_dic_arg[arg] = [pred]
             if pred.extra:
                 if pred.extra in self.i_dic_extra:
                     self.i_dic_extra[pred.extra].append(pred)
@@ -235,23 +300,23 @@ class SentenceIndex(object):
 
     def find(self, first=None, second=None, third=None, fourth=None, pos=None, arg=None, extra=None, return_set=False):
         predicate_lists = []
-        if arg:
+        if arg is not None:
             predicate_lists.append(self.i_dic_arg.get(arg, []))
-        if extra:
+        if extra is not None:
             predicate_lists.append(self.i_dic_extra.get(extra, []))
-        if first:
+        if first is not None:
             predicate_lists.append(self.i_dic_arg_first.get(first, []))
-        if second:
+        if second is not None:
             predicate_lists.append(self.i_dic_arg_second.get(second, []))
-        if third:
+        if third is not None:
             predicate_lists.append(self.i_dic_arg_third.get(third, []))
-        if fourth:
+        if fourth is not None:
             predicate_lists.append(self.i_dic_arg_fourth.get(fourth, []))
-        if pos:
+        if pos is not None and pos is not POS.NONE:
             predicate_lists.append(filter(lambda p: p.pos.pos == pos, self.sentence))
         if len(predicate_lists) == 1:
             if return_set and pos:
-                return PredicateSet(predicate_lists[0], predicate_lists)
+                return PredicateSet(predicate_lists[0], pos)
             return predicate_lists[0]
         else:
             list1 = predicate_lists.pop()
@@ -291,10 +356,12 @@ class Sentence(object):
         for i, p_str in enumerate(predicate_str):
             if p_str[0] == "[":
                 predicate = Predicate.fromstr(p_str)
-                predicates.append(predicate)
+                if predicate.lemma and predicate.pos.pos:
+                    predicates.append(predicate)
             else:
                 predicate = Predicate.efromstr(p_str)
-                predicates.append(predicate)
+                if len(predicate.extra) > 0:
+                    predicates.append(predicate)
 
         return Sentence(lf_line_index, predicates, lf_line)
 
