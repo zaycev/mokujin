@@ -19,12 +19,13 @@ from triples import (
     DepVerb_PrepCompl,
     DepVerb_SubjVerbVerbPrepNoun,
     DepVerb_SubjVerbVerb,
-    DepAdj_NounBePrepNoun,
+    # DepAdj_NounBePrepNoun,
     DepAdj_NounAdj,
     DepAdv_NounVerbAdvPrepNoun,
     DepAdv_VerbNounAdv,
-    DepNoun_NounPrep,
+    # DepNoun_NounPrep,
     DepNoun_NounNoun,
+    DepNoun_NounNounNoun,
     DepNoun_NounEqualPrepNoun,
     DepNoun_NounEqualNoun,
     DepNoun_NounPrepNoun,
@@ -34,12 +35,8 @@ from triples import (
 
 if __name__ == "__main__":
 
-    ifile = sys.stdin
-    ofile = sys.stdout
 
-    reader = MetaphorLF_Reader(ifile)
-
-    ex = TripleExtractor(triple_patterns=[
+    relations = [
         DepVerb_SubjVerbDirobj(),
         DepVerb_SubjVerbIndirobj(),
         DepVerb_SubjVerbInstr(),
@@ -47,24 +44,33 @@ if __name__ == "__main__":
         DepVerb_PrepCompl(),
         DepVerb_SubjVerbVerbPrepNoun(),
         DepVerb_SubjVerbVerb(),
-        DepAdj_NounBePrepNoun(),
         DepAdj_NounAdj(),
-        DepAdv_NounVerbAdvPrepNoun(),
         DepAdv_VerbNounAdv(),
-        DepNoun_NounPrep(),
-        DepNoun_NounNoun(),
         DepNoun_NounEqualPrepNoun(),
+        DepNoun_NounNoun(),
+        DepNoun_NounNounNoun(),
         DepNoun_NounEqualNoun(),
         DepNoun_NounPrepNoun(),
         DepAny_Compl(),
-    ])
+    ]
 
-    i_sents = reader.i_sentences()
+    if len(sys.argv) > 1:
+        ifile = open(sys.argv[1], "r")
+        if len(sys.argv) > 2:
+            ofile = open(sys.argv[2], "w")
+        else:
+            ofile = open("%s.triples.csv" % sys.argv[1], "w")
+    else:
+        ifile = sys.stdin
+        ofile = sys.stdout
 
+    reader = MetaphorLF_Reader(ifile)
+    i_sents = list(reader.i_sentences())
+
+    ex = TripleExtractor(triple_patterns=relations)
     i_triple_sets = ex.i_extract_triples(i_sents)
-
     tfold = TripleFold()
-    
+
     for triples in i_triple_sets:
         tfold.add_triples(triples)
 
@@ -74,5 +80,5 @@ if __name__ == "__main__":
         ofile.write(Triple.to_row(triple_tuple).encode("utf-8"))
         ofile.write("\n")
 
-    ifile.close()
     ofile.close()
+    ifile.close()

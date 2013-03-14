@@ -275,7 +275,7 @@ class DepAdj_NounBePrepNoun(AbsDependencyRelation):
 class DepAdj_NounAdj(AbsDependencyRelation):
     """
     Example:
-    noun_adj(noun,adjective) ("The book is good") -> only if there is no prep attached to adj as its arg.
+    noun_adj([noun+],adjective) ("The book is good") -> only if there is no prep attached to adj as its arg.
     """
     rel_name = "noun_adj"
 
@@ -283,11 +283,11 @@ class DepAdj_NounAdj(AbsDependencyRelation):
         matches = []
         for adj in sentence.index.find(pos=POS.ADJ):
             if adj.args.second:
-                nouns1 = sentence.index.find(second=adj.args.second, pos=POS.NN)
-                for noun1 in nouns1:
-                    preps = sentence.index.find(pos=POS.PREP)
-                    if len(preps) == 0:
-                        matches.append(Triple(self.rel_name, noun1, adj))
+                noun = sentence.index.find(second=adj.args.second, pos=POS.NN, return_set=True)
+                preps1 = sentence.index.find(pos=POS.PREP, second=adj.args.second)
+                preps2 = sentence.index.find(pos=POS.PREP, third=adj.args.second)
+                if len(preps1) == 0 and len(preps2) == 0 and noun:
+                    matches.append(Triple(self.rel_name, noun, adj))
         return matches
 
 
@@ -397,7 +397,7 @@ class DepNoun_NounNoun(AbsDependencyRelation):
                     noun2 = nouns2[0]
                     together = self.together(noun1.lemma, noun2.lemma)
                     if together not in nn_pairs:
-                        if noun1 != noun2:
+                        if noun1.lemma != noun2.lemma:
                             matches.append(Triple(self.rel_name, noun1, noun2))
                             nn_pairs.append(together)
         return matches
@@ -422,7 +422,7 @@ class DepNoun_NounNounNoun(AbsDependencyRelation):
                     noun2, noun3 = nouns2
                     together = self.together(noun1.lemma, noun2.lemma, noun3.lemma)
                     if together not in nn_triples:
-                        if noun1 != noun2 and noun2 != noun3 and noun1 != noun3:
+                        if noun1.lemma != noun2.lemma and noun2.lemma != noun3.lemma and noun1.lemma != noun3.lemma:
                             matches.append(Triple(self.rel_name, noun1, noun2, noun3))
                             nn_triples.append(together)
         return matches
