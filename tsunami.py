@@ -65,7 +65,7 @@ if __name__ == "__main__":
         ofile = sys.stdout
 
     reader = MetaphorLF_Reader(ifile)
-    i_sents = list(reader.i_sentences())
+    i_sents = reader.i_sentences()
 
     ex = TripleExtractor(triple_patterns=relations)
     i_triple_sets = ex.i_extract_triples(i_sents)
