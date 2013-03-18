@@ -7,14 +7,6 @@
 # For more information, see README.md
 # For license information, see LICENSE
 
-# combine.py – a simple tool for combining many text file into bigger one.
-# Usage example:
-# ./combine.py --dir datasets/russian/untagged/ \
-#              --ofile combined.txt \
-#              -p "*.rus" \
-#              -ie "utf-16" \
-#              -oe "utf-8"
-
 
 import os
 import sys
