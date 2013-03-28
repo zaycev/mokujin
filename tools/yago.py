@@ -22,6 +22,14 @@ ARG_NONE = 0x0
 ARG_EMPTY = 0x1
 
 
+class NodeType(object):
+    WORDNET = 0x1
+    OWL = 0x2
+    WIKI_INSTANCE = 0x3
+    WIKI_CATEGORY = 0x4
+    YAGO = 0x5
+
+
 class Output(object):
 
     def __init__(self, debug, out_file):
@@ -55,6 +63,7 @@ class Output(object):
 
 
 class YagoEntry(object):
+    word_re = re.compile(ur"\b[^\W\d_]+\b", re.UNICODE)
     
     def __init__(self, wn_node, rdf_label, lang=None):
         self.node = wn_node
@@ -62,9 +71,13 @@ class YagoEntry(object):
         self.lang = lang
     
     @staticmethod
-    def from_tsv_line(line, simplify=True):
-        line = line.decode("utf-8")
-        row = line.split("\t")
+    def instance_size(inst_node):
+        return len(YagoEntry.word_re.findall(inst_node))
+
+    @staticmethod
+    def from_tsv_line(tsv_line, simplify=True):
+        tsv_line = tsv_line.decode("utf-8")
+        row = tsv_line.split("\t")
         if simplify:
             wn_node = row[1]
             rdf_label = row[3].lower()
@@ -85,63 +98,91 @@ class YagoEntry(object):
         if node.startswith("<wordnet"):
             return True
         return False
-        
+
+    @staticmethod
+    def extract_transition(tsv_line):
+        line = tsv_line.decode("utf-8")
+        row = line.split("\t")
+        return row[1], row[3]
+
     def __repr__(self):
         repr_str = u"<YagoEntry(%s, %s, \"%s\")>" % (self.lang, self.node, self.label)
         return repr_str.encode("utf-8")
 
 
 class YagoDict(object):
-    
     SQL_CREATE_TABLE_STATEMENTS = (
         """
-        CREATE TABLE IF NOT EXISTS yago (
+        CREATE TABLE IF NOT EXISTS yago_node (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label VARCHAR(128) NOT NULL,
             node VARCHAR(128) NOT NULL
         );
         """,
         """
-        CREATE TABLE IF NOT EXISTS yago_compound (
+        CREATE TABLE IF NOT EXISTS yago_cpnd (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             part VARCHAR(128) NOT NULL,
             node INTEGER NOT NULL,
             UNIQUE (part, node)
         );
         """,
-        "CREATE UNIQUE INDEX IF NOT EXISTS `yago_id_idx` ON `yago` (`id` ASC);",
-        "CREATE INDEX IF NOT EXISTS `yago_label_idx` ON `yago` (`label` ASC);",
-        "CREATE INDEX IF NOT EXISTS `yago_node_idx` ON `yago` (`node` ASC);",
-        "CREATE UNIQUE INDEX IF NOT EXISTS `yago_compound_id_idx` ON `yago_compound` (`id` ASC);",
-        "CREATE INDEX IF NOT EXISTS `yago_compound_part_idx` ON `yago_compound` (`part` ASC);",
-        "CREATE INDEX IF NOT EXISTS `yago_compound_node_idx` ON `yago_compound` (`node` ASC);",
+        """
+        CREATE TABLE IF NOT EXISTS yago_taxn (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ins VARCHAR(64) NOT NULL,
+            cls VARCHAR(64) NOT NULL,
+            UNIQUE (ins, cls)
+        );
+        """,
+
+        "CREATE UNIQUE INDEX IF NOT EXISTS `yago_node_id_idx` ON `yago_node` (`id` ASC);",
+        "CREATE INDEX IF NOT EXISTS `yago_node_label_idx` ON `yago_node` (`label` ASC);",
+        "CREATE INDEX IF NOT EXISTS `yago_node_node_idx` ON `yago_node` (`node` ASC);",
+
+        "CREATE UNIQUE INDEX IF NOT EXISTS `yago_cpnd_id_idx` ON `yago_cpnd` (`id` ASC);",
+        "CREATE INDEX IF NOT EXISTS `yago_cpnd_part_idx` ON `yago_cpnd` (`part` ASC);",
+        "CREATE INDEX IF NOT EXISTS `yago_cpnd_node_idx` ON `yago_cpnd` (`node` ASC);",
+
+        "CREATE UNIQUE INDEX IF NOT EXISTS `yago_taxn_id_idx` ON `yago_taxn` (`id` ASC);",
+        "CREATE INDEX IF NOT EXISTS `yago_taxn_ins_idx` ON `yago_taxn` (`ins` ASC);",
+        "CREATE INDEX IF NOT EXISTS `yago_taxn_cls_idx` ON `yago_taxn` (`cls` ASC);",
     )
     
     def __init__(self, yago_dir, db_dir):
         self.kvs_place = "%s/kvs.db" % db_dir
-        self.idx_place = "%s/index.db" % db_dir
+        self.idx_place = "%s/idx.db" % db_dir
         self.sql_place = "%s/sql.db" % db_dir
+        self.txn_place = "%s/txn.db" % db_dir
+
         self.sql = sqlite3.connect(self.sql_place)
         self.kvs = leveldb.LevelDB(self.kvs_place)
         self.idx = leveldb.LevelDB(self.idx_place)
-        self.sql_read_cursor = self.sql.cursor()
-        self.sql_write_cursor = self.sql.cursor()
+        self.txn = leveldb.LevelDB(self.txn_place)
+
+        self.sql_r_cursor = self.sql.cursor()
+        self.sql_w_cursor = self.sql.cursor()
+
         self.kvs_batch = leveldb.WriteBatch()
         self.idx_batch = leveldb.WriteBatch()
+
         self.yago_dir = yago_dir
         self.db_dir = db_dir
         self.__kvs_counter = 0
+
         for statement in YagoDict.SQL_CREATE_TABLE_STATEMENTS:
-            self.sql_write_cursor.execute(statement)
+            self.sql_w_cursor.execute(statement)
         self.sql.commit()
 
     @staticmethod
     def create(yago_dir, db_dir, lang=None):
         yago_classes_fl = "%s/yagoMultilingualClassLabels.tsv" % yago_dir
         yago_instances_fl = "%s/yagoMultilingualInstanceLabels.tsv" % yago_dir
+        yago_transitions_fl = "%s/yagoTransitiveType.tsv" % yago_dir
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)
         yago = YagoDict(yago_dir, db_dir)
+
         with open(yago_classes_fl, "rb") as classes, open(yago_instances_fl, "rb") as instances:
             for line in itertools.chain(classes, instances):
                 entry = YagoEntry.from_tsv_line(line)
@@ -149,13 +190,19 @@ class YagoDict(object):
                     yago.sql_insert_entry(entry)
                 elif lang is None:
                     yago.sql_insert_entry(entry)
+
+        with open(yago_transitions_fl, "rb") as transitions:
+            for line in transitions:
+                node_a, node_b = YagoEntry.extract_transition(line)
+                yago.sql_insert_txn_transition(node_a, node_b)
+
         yago.sql.commit()
         return yago
             
     def create_kvs_from_sql(self):
         prev = None
         node_set = None
-        for label, node in self.sql_read_cursor.execute("SELECT label,node FROM yago ORDER BY label;"):
+        for label, node in self.sql_r_cursor.execute("SELECT label,node FROM yago_node ORDER BY label;"):
             if label != prev:
                 if node_set is not None and len(node_set) > 0:
                     self.kvs_insert_entryset(prev.encode("utf-8"), node_set)
@@ -167,15 +214,15 @@ class YagoDict(object):
         self.kvs.Write(self.kvs_batch, sync=True)
 
     def create_idx_from_sql(self):
-        word_re = re.compile(ur"\b[^\W\d_]+\b", re.UNICODE)
-        for label, node in self.sql_read_cursor.execute("SELECT label,node FROM yago ORDER BY label;"):
+        word_re = YagoEntry.word_re
+        for label, node in self.sql_r_cursor.execute("SELECT label,node FROM yago_node ORDER BY label;"):
             label_parts = word_re.findall(label)
             for part in label_parts:
                 self.sql_insert_part(part, node)
         self.sql.commit()
         prev = None
         node_set = None
-        for part, node in self.sql_read_cursor.execute("SELECT part,node FROM yago_compound ORDER BY part;"):
+        for part, node in self.sql_r_cursor.execute("SELECT part,node FROM yago_cpnd ORDER BY part;"):
             if part != prev:
                 if node_set is not None and len(node_set) > 0:
                     self.index_part(prev.encode("utf-8"), node_set)
@@ -186,15 +233,23 @@ class YagoDict(object):
             self.index_part(prev.encode("utf-8"), node_set)
         self.idx.Write(self.idx_batch, sync=True)
 
+    def create_txn_from_sql(self):
+        print "CREATE TAXONOMY"
+
     def sql_insert_entry(self, entry):
-        sql_insert = u"INSERT INTO yago (label, node) VALUES (?,?);"
+        sql_insert = u"INSERT INTO yago_node (label, node) VALUES (?,?);"
         values = (entry.label, entry.node)
-        self.sql_write_cursor.execute(sql_insert, values)
+        self.sql_w_cursor.execute(sql_insert, values)
+
+    def sql_insert_txn_transition(self, inst_node, class_node):
+        sql_insert = u"INSERT INTO yago_taxn (ins, cls) VALUES (?,?);"
+        values = (inst_node, class_node)
+        self.sql_w_cursor.execute(sql_insert, values)
 
     def sql_insert_part(self, part, node):
         try:
-            sql_insert = u"INSERT INTO yago_compound (part, node) VALUES (?,?);"
-            self.sql_write_cursor.execute(sql_insert, (part, node))
+            sql_insert = u"INSERT INTO yago_cpnd (part, node) VALUES (?,?);"
+            self.sql_w_cursor.execute(sql_insert, (part, node))
         except sqlite3.Error:
             pass
 
@@ -211,8 +266,8 @@ class YagoDict(object):
             self.idx.Write(self.kvs_batch, sync=True)
 
     def sql_map_lemma(self, lemma):
-        sql_statement = "SELECT node FROM yago WHERE label=?;"
-        nodes = [row[0] for row in self.sql_read_cursor.execute(sql_statement, (lemma, ))]
+        sql_statement = "SELECT node FROM yago_node WHERE label=?;"
+        nodes = [row[0] for row in self.sql_r_cursor.execute(sql_statement, (lemma, ))]
         if len(nodes) > 0:
             return set(nodes)
         return None
@@ -360,9 +415,13 @@ if __name__ == "__main__":
         yago.create_kvs_from_sql()
         logging.info("CREATING INVERTED INDEX")
         yago.create_idx_from_sql()
+        logging.info("CREATING TAXONOMY INDEX")
+        yago.create_txn_from_sql()
     else:
         logging.info("LOADING TEMP DB: %s" % db_dir)
         yago = YagoDict(yago_dir, db_dir)
+
+    exit(0)
 
 
         # test_2list = [
