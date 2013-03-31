@@ -1,4 +1,4 @@
-# Tsunami
+# MOKUJIN
 
 Language-agnostic exractor for binary relationships from natural language sentences.
 
