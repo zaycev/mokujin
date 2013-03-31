@@ -29,10 +29,12 @@ class NodeType(object):
     WIKI_CATEGORY = 0x4
     YAGO = 0x5
 
+
 class ConceptRelation(object):
     ConceptuallyRelatedTo = 0x1
     DerivedFrom = 0x2
     Synonym = 0x3
+
 
 class Output(object):
 
@@ -184,6 +186,21 @@ class YagoDict(object):
         "CREATE INDEX IF NOT EXISTS `names_name_idx` ON `names` (`name` ASC);",
     )
 
+    SQL_MAP_LEMMA = "SELECT node FROM yago_node WHERE label=?;"
+    SQL_IS_NAME = "SELECT name FROM names WHERE name=?;"
+    SQL_FIND_ALL_CLASSES = "SELECT parent FROM yago_hrch WHERE child=?;"
+    SQL_FIND_CLASS = "SELECT cls FROM yago_taxn WHERE ins=?;"
+    SQL_FIND_CONCEPT = "SELECT concept FROM conceptnet WHERE form=?;"
+    SQL_FIND_CONCEPT_REL = "SELECT concept FROM conceptnet WHERE form=? AND rel=?;"
+    SQL_INSERT_ENTRYSET = "INSERT INTO yago_cpnd (part, node) VALUES (?,?);"
+    SQL_INSERT_NAME = u"INSERT INTO names (name) VALUES (?);"
+    SQL_INSERT_TXN_RELATION = u"INSERT INTO yago_hrch (child, parent) VALUES (?,?);"
+    SQL_INSERT_TXN_TRANSITION = u"INSERT INTO yago_taxn (ins, cls) VALUES (?,?);"
+    SQL_INSERT_ENTRY = u"INSERT INTO yago_node (label, node) VALUES (?,?);"
+    SQL_INSERT_CONCEPT = u"INSERT INTO conceptnet (rel,concept,form,pos) VALUES (?,?,?,?);"
+
+
+
     def __init__(self, yago_dir, db_dir):
         self.kvs_place = "%s/kvs.db" % db_dir
         self.idx_place = "%s/idx.db" % db_dir
@@ -225,11 +242,6 @@ class YagoDict(object):
                     yago.sql_insert_entry(entry)
                 elif lang is None:
                     yago.sql_insert_entry(entry)
-
-        with open(yago_transitions_fl, "rb") as transitions:
-            for line in transitions:
-                node_a, node_b = YagoEntry.extract_transition(line)
-                yago.sql_insert_txn_transition(node_a, node_b)
 
         yago.sql.commit()
         return yago
@@ -316,49 +328,43 @@ class YagoDict(object):
         elif rel_name == "Synonym":
             values = (ConceptRelation.Synonym, concept, form, pos)
         else:
+            values = None
             logging.msg("ERROR: unknown conceptnet relation type")
-        sql_insert = u"INSERT INTO conceptnet (rel,concept,form,pos) VALUES (?,?,?,?);"
         try:
-            self.sql_w_cursor.execute(sql_insert, values)
+            self.sql_w_cursor.execute(self.SQL_INSERT_CONCEPT, values)
         except sqlite3.Error:
             pass
 
     def sql_insert_entry(self, entry):
-        sql_insert = u"INSERT INTO yago_node (label, node) VALUES (?,?);"
         values = (entry.label, entry.node)
         try:
-            self.sql_w_cursor.execute(sql_insert, values)
+            self.sql_w_cursor.execute(self.SQL_INSERT_ENTRY, values)
         except sqlite3.Error:
             pass
 
     def sql_insert_txn_transition(self, inst_node, class_node):
-        sql_insert = u"INSERT INTO yago_taxn (ins, cls) VALUES (?,?);"
         values = (inst_node, class_node)
         try:
-            self.sql_w_cursor.execute(sql_insert, values)
+            self.sql_w_cursor.execute(self.SQL_INSERT_TXN_TRANSITION, values)
         except sqlite3.Error:
             pass
 
     def sql_insert_txn_relation(self, child, parent):
-        sql_insert = u"INSERT INTO yago_hrch (child, parent) VALUES (?,?);"
         values = (child, parent)
         try:
-            self.sql_w_cursor.execute(sql_insert, values)
+            self.sql_w_cursor.execute(self.SQL_INSERT_TXN_RELATION, values)
         except sqlite3.Error:
             pass
 
     def sql_insert_name(self, name):
-        sql_insert = u"INSERT INTO names (name) VALUES (?);"
         try:
-            self.sql_w_cursor.execute(sql_insert, (name, ))
+            self.sql_w_cursor.execute(self.SQL_INSERT_NAME, (name, ))
         except sqlite3.Error:
             pass
 
-
     def sql_insert_part(self, part, node):
         try:
-            sql_insert = u"INSERT INTO yago_cpnd (part, node) VALUES (?,?);"
-            self.sql_w_cursor.execute(sql_insert, (part, node))
+            self.sql_w_cursor.execute(self.SQL_INSERT_ENTRYSET, (part, node))
         except sqlite3.Error:
             pass
 
@@ -374,45 +380,46 @@ class YagoDict(object):
         if self.__kvs_counter % 100000 == 0:
             self.idx.Write(self.kvs_batch, sync=True)
 
+
     def find_concept(self, form, rel=None):
         if rel is None:
             values = (form, )
-            sql_statement = "SELECT concept FROM conceptnet WHERE form=?;"
+            concepts = [row[0] for row in self.sql_r_cursor.execute(self.SQL_FIND_CONCEPT, values)]
         else:
             values = (form, rel, )
-            sql_statement = "SELECT concept FROM conceptnet WHERE form=? AND rel=?;"
-        concepts = [row[0] for row in self.sql_r_cursor.execute(sql_statement, values)]
+            concepts = [row[0] for row in self.sql_r_cursor.execute(self.SQL_FIND_CONCEPT_REL, values)]
         if len(concepts) > 0:
             return set(concepts)
         return None
 
     def find_class(self, instance):
-        sql_statement = "SELECT cls FROM yago_taxn WHERE ins=?;"
-        classes = [row[0] for row in self.sql_r_cursor.execute(sql_statement, (instance, ))]
+        classes = [row[0] for row in self.sql_r_cursor.execute(self.SQL_FIND_CLASS, (instance, ))]
         if len(classes) > 0:
             return set(classes)
         return None
 
     def find_all_classes(self, child):
         classes = [child]
-        sql_statement = "SELECT parent FROM yago_hrch WHERE child=?;"
-        new_classes = [row[0] for row in self.sql_r_cursor.execute(sql_statement, (child, ))]
+        new_classes = [row[0] for row in self.sql_r_cursor.execute(self.SQL_FIND_ALL_CLASSES, (child, ))]
         while len(new_classes) > 0:
             classes.extend(new_classes)
             children = new_classes
             new_classes = []
             for ch in children:
-                new_classes.extend([row[0] for row in self.sql_r_cursor.execute(sql_statement, (ch, ))])
+                new_classes.extend([row[0] for row in self.sql_r_cursor.execute(self.SQL_FIND_ALL_CLASSES, (ch, ))])
         return set(classes)
 
+    def is_subclass(self, inst_nodes, class_node):
+        if YagoEntry.is_class(class_node) and class_node in inst_nodes:
+            return True
+        return False
+
     def is_name(self, name):
-        sql_statement = "SELECT name FROM names WHERE name=?;"
-        names = self.sql_r_cursor.execute(sql_statement, (name, ))
+        names = self.sql_r_cursor.execute(self.SQL_IS_NAME, (name, ))
         return len(list(names)) > 0
 
     def sql_map_lemma(self, lemma):
-        sql_statement = "SELECT node FROM yago_node WHERE label=?;"
-        nodes = [row[0] for row in self.sql_r_cursor.execute(sql_statement, (lemma, ))]
+        nodes = [row[0] for row in self.sql_r_cursor.execute(self.SQL_MAP_LEMMA, (lemma, ))]
         if len(nodes) > 0:
             return set(nodes)
         return None
@@ -442,29 +449,55 @@ class YagoDict(object):
         return intersection
 
     def expand_instances(self, node_set):
-        new_nodes = set()
-        for node in node_set:
-            if not YagoEntry.is_class(node):
-                found_nodes = self.find_class(node)
-                if found_nodes is not None:
-                    for foud_node in found_nodes:
-                        new_nodes.add(foud_node)
-            else:
-                new_nodes.add(node)
-        return new_nodes
+        if node_set is not None and len(node_set) > 0:
+            new_nodes = set()
+            for node in node_set:
+                if not YagoEntry.is_class(node):
+                    found_nodes = self.find_class(node)
+                    if found_nodes is not None:
+                        for foud_node in found_nodes:
+                            new_nodes.add(foud_node)
+                else:
+                    new_nodes.add(node)
+            return new_nodes
+        return node_set
 
-    def find_compound2(self, lemmas, min_threshold=1, init_len=1, max_len=3, prefer_classes=True):
+    def count_classes(self, node_set):
+        count = 0
+        for node in node_set:
+            if YagoEntry.is_class(node):
+                count += 1
+        return count
+
+    NODE_PERSON = {"<wordnet_person_100007846>", "<wordnet_person_105217688>"}
+
+    def find_compound(self, lemmas, min_threshold=1, init_len=1, max_len=3, prefer_classes=True):
         if len(lemmas) == 0:
             return None
+        best_comb = None
         best_nodes = None
         best_len = 0xFFFFFF
         for comb_len in xrange(init_len, min(len(lemmas) + 1, max_len + 1)):
             combs = list(itertools.combinations(lemmas, comb_len))
             for comb in combs:
-                nodes = self.idx_map_compound(comb)
-                if min_threshold <= len(nodes) <= best_len:
+                if len(comb) == 1:
+                    nodes = self.kvs_map_lemma(comb[0].encode("utf-8"))
+                    if nodes is None or len(nodes) == 0:
+                        nodes = self.idx_map_compound(comb)
+                        # если есть еще совпадения, добавить из в результат
+                    else:
+                        nodes = {}
+                        for comb2 in combs:
+                            nodes |= self.kvs_map_lemma(comb2[0].encode("utf-8"))
+                        return nodes
+                else:
+                    nodes = self.idx_map_compound(comb)
+                classes_n = self.count_classes(nodes)
+                new_len = classes_n if classes_n > 0 else len(nodes)
+                if min_threshold <= new_len <= best_len:
                     best_nodes = nodes
-                    best_len = len(best_nodes)
+                    best_len = new_len
+                    best_comb = comb
         if prefer_classes and best_nodes is not None:
             classes_found = False
             for node in best_nodes:
@@ -475,23 +508,9 @@ class YagoDict(object):
                 best_nodes = filter(lambda node: YagoEntry.is_class(node), best_nodes)
             else:
                 best_nodes = [min(best_nodes, key=lambda node: len(node.split("_")))]
-        return best_nodes
-
-    def find_compound(self, lemmas):
-        if len(lemmas) == 0:
-            return None
-        initial_sets = [self.idx_map_compound([lemma]) for lemma in lemmas]
-        initial_sets = filter(lambda s: len(s) > 0, initial_sets)
-        if len(initial_sets) == 0:
-            return None
-        initial_sets = [self.expand_instances(nset) for nset in initial_sets]
-        intersection = initial_sets[0]
-        for i in xrange(1, len(initial_sets)):
-            intersection = intersection & initial_sets[i]
-        if len(intersection) > 0:
-            return intersection
-        return set([])
-
+        if best_nodes is not None and len(best_comb) == 1 and self.is_name(best_comb[0]):
+            return self.NODE_PERSON
+        return self.expand_instances(best_nodes)
 
 
 def parse_triple_row(csv_row):
@@ -511,7 +530,7 @@ def parse_triple_row(csv_row):
     return rel_name, args, freq
 
 
-def process_triple(yago, out_file, rel_name, freq, test=True, *args):
+def process_triple(yago, out_file, rel_name, freq, test, *args):
 
     if test:
         for arg in args:
@@ -526,8 +545,8 @@ def process_triple(yago, out_file, rel_name, freq, test=True, *args):
                     nodes = yago.find_compound(lemmas_set)
                     if nodes is not None and len(nodes) > 0:
                         out_file.write(lemmas.encode("utf-8"))
-                        out_file.write("\t")
-                        out_file.write(("{%s}" % ";".join(nodes)).encode("utf-8"))
+                        # out_file.write("\t")
+                        # out_file.write(("{%s}" % ";".join(nodes)).encode("utf-8"))
                         if len(nodes) == 1 and not YagoEntry.is_class(list(nodes)[0]):
                             out_file.write(" => ")
                             out_file.write("\n")
@@ -535,6 +554,13 @@ def process_triple(yago, out_file, rel_name, freq, test=True, *args):
                             for cl in classes:
                                 out_file.write("\t\t")
                                 out_file.write(cl.encode("utf-8"))
+                                out_file.write("\n")
+                        else:
+                            out_file.write(" => ")
+                            out_file.write("\n")
+                            for node in nodes:
+                                out_file.write("\t\t")
+                                out_file.write(node.encode("utf-8"))
                                 out_file.write("\n")
                         out_file.write("\n")
     else:
@@ -613,101 +639,26 @@ if __name__ == "__main__":
     if debug:
         logging.basicConfig(level=logging.DEBUG)
 
-    if create_db == 1: pass
-        # logging.info("CREATING A TEMP DB FOR YAGO(%s): %s" % (yago_dir, db_dir))
-        # logging.info("CREATING MAIN SQL STORAGE")
-        # yago = YagoDict.create(yago_dir, db_dir, lang)
-        # logging.info("CREATING KV STORAGE")
-        # yago.create_kvs_from_sql()
-        # logging.info("CREATING INVERTED INDEX")
-        # yago.create_idx_from_sql()
-        # logging.info("CREATING TAXONOMY INDEX")
-        # yago.create_txn_from_sql()
-
-        # yago.create_conceptnet()
-        # yago.create_hrc()
-        # yago.create_txn_from_sql()
-        # yago.create_names()
-        # yago.create_names()
+    if create_db == 1:
+        logging.info("CREATING A TEMP DB FOR YAGO(%s): %s" % (yago_dir, db_dir))
+        logging.info("CREATING MAIN SQL STORAGE")
+        yago = YagoDict.create(yago_dir, db_dir, lang)
+        logging.info("CREATING KV STORAGE")
+        yago.create_kvs_from_sql()
+        logging.info("CREATING INVERTED INDEX")
+        yago.create_idx_from_sql()
+        logging.info("CREATING CONCEPTNET DB")
+        yago.create_conceptnet()
+        logging.info("CREATING HIERARCHY DB")
+        yago.create_hrc()
+        logging.info("CREATING TAXONOMY INDEX")
+        yago.create_txn_from_sql()
+        logging.info("CREATING NAMES DB")
+        yago.create_names()
+        logging.info("DB COMPLETE")
     else:
         logging.info("LOADING TEMP DB: %s" % db_dir)
         yago = YagoDict(yago_dir, db_dir)
-
-
-    test_2list = [
-        [u"академик", u"сахаров"],
-        [u"алексей", u"андреев", u"архипов"],
-        [u"гдов", u"писатель"],
-        [u"геворг", u"повар"],
-        [u"россия", u"партия"],
-        [u"россия", u"партия", u"единая"],
-        [u"глава", u"сергей", u"иванов"],
-        [u"владимир", u"путин"],
-        [u"президент", u"владимир", u"путин", u"владимирович"],
-        [u"президент", u"дмитрий", u"медведев"],
-        [u"дмитрий", u"медведев"],
-        [u"дмитрий", u"медведев", u"анатольевич"],
-        [u"коэн", u"морис"],
-        [u"глава", u"аранович", u"ицхак"],
-        [u"билл", u"гейтс"],
-        [u"опозиционер", u"алексей", u"навальный"],
-    ]
-
-    for comp in test_2list:
-        print "COMPOUND:"
-        for l in comp:
-            print l.encode("utf-8")
-        # print "ALL NODES", yago.find_compound(comp, prefer_classes=False)
-        # print "WHEN PREFER SHORT CLASSES", yago.find_compound(comp)
-        print yago.find_compound(comp)
-        print
-
-    # test3 = [
-    #     u"дарственная",
-    #     u"нырять",
-    #     u"лекционный",
-    #     u"президентский",
-    #     u"потрясти",
-    # ]
-
-    # for form in test3:
-    #     print form.upper().encode("UTF-8")
-    #     concepts = yago.find_concept(form)
-    #     if concepts is not None:
-    #         for cn in concepts:
-    #             print cn.encode("utf-8")
-    #     else:
-    #         print "{}"
-    #     print
-
-    # print yago.find_all_classes("<wikicategory_Presidents_of_the_Montana_Senate>")
-
-    # test = [
-    #     u"владимир",
-    #     u"зайцев",
-    #     u"сахаров",
-    #     u"вова",
-    #     u"володя",
-    #     u"тарас",
-    #     u"лена",
-    #     u"путин",
-    #     u"алексей",
-    #     u"иванова",
-    #     u"алеша",
-    #     u"николай",
-    #     u"коля",
-    #     u"лодка",
-    #     u"стол",
-    #     u"вода",
-    #     u"книга",
-    # ]
-
-    # for name in test:
-    #     print name.encode("utf-8"), yago.is_name(name)
-
-    # print yago.expand_instances(set(["<Tim_Story>"]))
-
-    exit(0)
 
     out = Output(debug, out_file)
 
