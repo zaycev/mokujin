@@ -90,21 +90,21 @@ def split_file(ifile, ofilef, iformat, chunk_numb):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    
+
     iformats = FORMAT_SPLITTER_MAP.keys()
-    
+
     parser.add_argument("-i", "--ifile", default=None, type=str)
     parser.add_argument("-o", "--ofilef", default=None, type=str)
     parser.add_argument("-n", "--chunknumb", default=1, type=int)
     parser.add_argument("-f", "--iformat", default="plain", type=str, choices=iformats)
-    
+
     args = parser.parse_args()
-    
+
     ifile = args.ifile
     ofilef = args.ofilef
     chunk_numb = args.chunknumb
     iformat = args.iformat
-    
+
     if not ofilef or not ifile:
         sys.stderr.write("Error: you have to specify both – the input file path "
                          "and the output files format (-i/--ifile and -o/--ofilef)\n")
