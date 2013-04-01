@@ -840,7 +840,7 @@ if __name__ == "__main__":
         logging.info("CREATING HIERARCHY DB")
         yago.create_hrc()
         logging.info("CREATING TAXONOMY INDEX")
-        yago.create_txn_from_sql()
+        yago.create_txn()
         logging.info("CREATING NAMES DB")
         yago.create_names()
         logging.info("CREATE DIRECT PARENT MAP")
