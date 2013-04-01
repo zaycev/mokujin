@@ -750,11 +750,11 @@ def process_triple(yago, out_file, rel_name, freq, test, stat_collector, *args):
                 out_file.write("<->,")
             else:
                 lemmas, pos = arg
-                out_file.write(lemmas.encode("utf-8"))
-                out_file.write("-")
-                out_file.write(pos)
-                out_file.write(",")
                 if pos == "NN":
+                    out_file.write(lemmas.encode("utf-8"))
+                    out_file.write("-")
+                    out_file.write(pos)
+                    out_file.write(",")
                     lemmas_set = lemmas.split("&&")
                     if len(lemmas_set) == 1:
                         nodes = yago.kvs_map_lemma(lemmas_set[0].encode("utf-8"))
