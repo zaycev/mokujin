@@ -31,7 +31,7 @@ class SourceTargetSearcher(object):
 
     @staticmethod
     def __compile(word):
-        return re.compile(".*" + word.replace(" ", ".*\s+.*") + ".*")
+        return re.compile(".*\s+" + word.replace(" ", ".*\s+.*") + "\s+.*")
 
     def find_matches(self, text):
         matches = []
