@@ -57,10 +57,9 @@ class SourceTargetSearcher(object):
 
     def i_process_sentences(self, i_sentences):
         for sent in i_sentences:
-            text = " ".join(sent.lemmas())
-            matches = self.find_matches(text)
+            matches = self.find_matches(sent.raw_text)
             for label, source, target in matches:
-                yield sent.sid, text, label, source, target
+                yield sent.sid, sent.raw_text, label, source, target
 
 
 if __name__ == "__main__":

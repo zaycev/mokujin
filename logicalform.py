@@ -336,11 +336,12 @@ class SentenceIndex(object):
 
 class Sentence(object):
 
-    def __init__(self, sid, predicates, line=None):
+    def __init__(self, sid, predicates, line=None, raw_text=None):
         self.line = line
         self.predicates = predicates
         self.sid = sid
         self.index = SentenceIndex(self)
+        self.raw_text = raw_text
 
     def lemmas(self):
         lemmas = []
@@ -377,14 +378,16 @@ class MetaphorLF_Reader(object):
 
     def i_sentences(self):
         i = 0
+        text = None
         for line in self.lf_file:
             line = line.decode("utf-8")
             if line[0] == "%":
-                continue
+                text = line[2:len(line)]
             elif line[0:3] == "id(":
                 continue
             elif len(line) > 1:
                 sentence = Sentence.from_lf_line(i, line)
+                sentence.raw_text = text
                 i += 1
                 yield sentence
             else:
