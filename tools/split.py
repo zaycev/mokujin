@@ -18,10 +18,16 @@ SENT_END = 0xDC
 class PlainSplitter(object):
     
     def __init__(self):
-        pass
+        self.prev_eol = False
         
-    def map_line(self, line, line_number):
-        pass
+    def map_line(self, line):
+        if line == "\n":
+            if self.prev_eol:
+                return SENT_END, "\n"
+            self.prev_eol = True
+            return ""
+        self.prev_eol = False
+        return line,
 
 
 class RuwacSplitter(object):
@@ -80,7 +86,7 @@ def split_file(ifile, ofilef, iformat, chunk_numb):
             else:
                 prev_is_end = False
                 chunk.write(mapping)
-                chunk.write("\n")
+                # chunk.write("\n")
     
     if not chunk.closed:
         chunk.close()
