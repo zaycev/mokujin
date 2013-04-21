@@ -9,6 +9,7 @@
 
 import gc
 import leveldb
+import logging
 import marshal as pickle
 
 from mokujin import numencode
@@ -32,7 +33,7 @@ class ArgType(object):
     POS_NONE = "POS>"
 
 
-class TsReader(object):
+class TripleReader(object):
     
     def parse_triple_row(self, ts_row):
         arguments = []
@@ -215,12 +216,14 @@ class TripleIndex(object):
                 else:
                     self.arg_cache[stamp[i]] = [(triple_id, i)]
 
-    def create_index(self, triples, threshold=10, cache_size=1024 ** 3):
+    def create_index(self, triples, threshold=10, cache_size=1000 ** 2):
+        i = 0
         self.id_term_map = []
         self.term_id_map = dict()
         self.triple_id_map = []
         self.arg_cache = dict()
         cached = 0
+        logging.info("starting creating index")
         for triple in triples:
             args = triple[1]
             freq = triple[-1]
@@ -229,10 +232,12 @@ class TripleIndex(object):
                     self.__cache_term(term)
             stamp = self.triple2stamp(triple, self.term_id_map)
             if freq > threshold:
+                i += 1
                 tr_id = self.__cache_triple(stamp)
                 self.__cache_arg_posting_list(tr_id, stamp)
                 cached += 1
                 if cached > cache_size:
+                    logging.info("%dM triples done, flushing cache" % i)
                     self.__update_arg_index()
                     cached = 0
                     self.arg_cache = dict()
