@@ -9,28 +9,9 @@
 
 import sys
 
-from logicalform import MetaphorLF_Reader
-from triples import TripleExtractor, TripleFold, Triple
-from triples import (
-    DepVerb_SubjVerbDirobj,
-    DepVerb_SubjVerbIndirobj,
-    DepVerb_SubjVerbInstr,
-    DepVerb_SubjVerb,
-    DepVerb_PrepCompl,
-    DepVerb_SubjVerbVerbPrepNoun,
-    DepVerb_SubjVerbVerb,
-    # DepAdj_NounBePrepNoun,
-    DepAdj_NounAdj,
-    DepAdv_NounVerbAdvPrepNoun,
-    DepAdv_VerbNounAdv,
-    # DepNoun_NounPrep,
-    DepNoun_NounNoun,
-    DepNoun_NounNounNoun,
-    DepNoun_NounEqualPrepNoun,
-    DepNoun_NounEqualNoun,
-    DepNoun_NounPrepNoun,
-    DepAny_Compl,
-)
+from mokujin.logicalform import MetaphorLF_Reader
+from mokujin.triples import TripleExtractor, TripleFold, Triple
+from mokujin.triples import ACTUAL_RELS as RELS
 
 _ = """
   __  __  ___  _  ___   _     _ ___ _   _
@@ -46,24 +27,6 @@ if __name__ == "__main__":
 
     print _
 
-    relations = [
-        DepVerb_SubjVerbDirobj(),
-        DepVerb_SubjVerbIndirobj(),
-        DepVerb_SubjVerbInstr(),
-        DepVerb_SubjVerb(),
-        DepVerb_PrepCompl(),
-        DepVerb_SubjVerbVerbPrepNoun(),
-        DepVerb_SubjVerbVerb(),
-        DepAdj_NounAdj(),
-        DepAdv_VerbNounAdv(),
-        DepNoun_NounEqualPrepNoun(),
-        DepNoun_NounNoun(),
-        DepNoun_NounNounNoun(),
-        DepNoun_NounEqualNoun(),
-        DepNoun_NounPrepNoun(),
-        DepAny_Compl(),
-    ]
-
     if len(sys.argv) > 1:
         ifile = open(sys.argv[1], "r")
         if len(sys.argv) > 2:
@@ -77,7 +40,7 @@ if __name__ == "__main__":
     reader = MetaphorLF_Reader(ifile)
     i_sents = reader.i_sentences()
 
-    ex = TripleExtractor(triple_patterns=relations)
+    ex = TripleExtractor(triple_patterns=RELS)
     i_triple_sets = ex.i_extract_triples(i_sents)
     tfold = TripleFold()
 
