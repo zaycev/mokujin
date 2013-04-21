@@ -8,11 +8,11 @@
 
 
 import collections
-from logicalform import POS, Predicate
+from mokujin.logicalform import POS
 
 
 class AbsDependencyRelation(object):
-    triple_class = "abstract"
+    rel_name = "abstract"
 
     def together(self, *args):
         lemmas = ["N" if a is None else a for a in args]
@@ -590,3 +590,21 @@ class TripleExtractor():
                 matches.extend(pattern.find_matches(sent))
             yield matches
 
+
+ACTUAL_RELS = (
+    DepVerb_SubjVerbDirobj(),
+    DepVerb_SubjVerbIndirobj(),
+    DepVerb_SubjVerbInstr(),
+    DepVerb_SubjVerb(),
+    DepVerb_PrepCompl(),
+    DepVerb_SubjVerbVerbPrepNoun(),
+    DepVerb_SubjVerbVerb(),
+    DepAdj_NounAdj(),
+    DepAdv_VerbNounAdv(),
+    DepNoun_NounEqualPrepNoun(),
+    DepNoun_NounNoun(),
+    DepNoun_NounNounNoun(),
+    DepNoun_NounEqualNoun(),
+    DepNoun_NounPrepNoun(),
+    DepAny_Compl(),
+)
