@@ -301,7 +301,6 @@ class SearchEngine(object):
             plist = [plist_el[0] for plist_el in plist]
             plist = set(plist)
             results.append(plist)
-        print results
         if len(results) > 0:
             final_result = results[0]
             for i in range(1, len(results)):
@@ -313,7 +312,6 @@ class SearchEngine(object):
         return []
 
     def print_result(self, search_result, max_results=10):
-        print "FOUND: %d" % len(search_result)
         for triple in search_result[:max_results]:
             triple_str = "<Triple(%s, " % self.index.id_rel_map[triple[0]]
             for i in range(1, len(triple) - 1):
