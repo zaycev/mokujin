@@ -15,7 +15,6 @@ from mokujin.index import TripleIndex
 from mokujin.index import SearchEngine
 from mokujin.web.settings import INDEX_DIR
 from django.shortcuts import render_to_response
-from django.core.urlresolvers import resolve
 
 
 indexer = TripleIndex(INDEX_DIR)
@@ -52,7 +51,7 @@ class SearchResultWrapper(object):
 
 
 def search_index(request):
-    raw_query = request.GET.get("q")
+    raw_query = request.GET.get("q", "")
     show_all = request.GET.get("all", False)
     if raw_query:
         query = raw_query.split("#")
