@@ -9,7 +9,13 @@
 
 from django.conf.urls import url
 from django.conf.urls import patterns
+from django.shortcuts import redirect
 
 
-urlpatterns = patterns("", url(r"^$", "mokujin.web.search.views.search_index", name="search_index"),)
+urlpatterns = patterns(
+    "",
+    url("^$", lambda _: redirect("/triples/")),
+    url(r"^triples/$", "mokujin.web.search.views.triples", name="triples"),
+    url(r"^novels/$", "mokujin.web.search.views.novels", name="novels"),
+)
 

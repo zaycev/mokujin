@@ -50,7 +50,7 @@ class SearchResultWrapper(object):
             yield triple_ext
 
 
-def search_index(request):
+def triples(request):
     raw_query = request.GET.get("q", "")
     show_all = request.GET.get("all", False)
     if raw_query:
@@ -71,21 +71,63 @@ def search_index(request):
         if term is not None and term.encode("utf-8") in engine.term_id_map:
             found_triples = engine.search(arg_query=((term, term_pos),))
             results = SearchResultWrapper(found_triples, max_results=20, show_all=show_all)
-            return render_to_response("index.html", {
+            return render_to_response("triples.html", {
                 "query": raw_query,
                 "result": results,
                 "all": show_all,
                 "url": request.build_absolute_uri,
             })
         else:
-            return render_to_response("index.html", {
+            return render_to_response("triples.html", {
                 "query": raw_query,
                 "message": "Term not found",
                 "all": show_all,
                 "url": request.build_absolute_uri,
             })
     else:
-        return render_to_response("index.html", {
+        return render_to_response("triples.html", {
+            "query": raw_query,
+            "all": show_all,
+            "url": request.build_absolute_uri,
+        })
+
+
+def novels(request):
+    raw_query = request.GET.get("q", "")
+    show_all = request.GET.get("all", False)
+    if raw_query:
+        query = raw_query.split("#")
+        if len(query) > 0:
+            term = query[0]
+            if len(query) > 1:
+                try:
+                    term_pos = int(query[1])
+                except Exception:
+                    term_pos = -1
+            else:
+                term_pos = -1
+        else:
+            term = None
+            term_pos = -1
+
+        if term is not None and term.encode("utf-8") in engine.term_id_map:
+            found_triples = engine.search(arg_query=((term, term_pos),))
+            results = SearchResultWrapper(found_triples, max_results=20, show_all=show_all)
+            return render_to_response("novels.html", {
+                "query": raw_query,
+                "result": results,
+                "all": show_all,
+                "url": request.build_absolute_uri,
+            })
+        else:
+            return render_to_response("novels.html", {
+                "query": raw_query,
+                "message": "Term not found",
+                "all": show_all,
+                "url": request.build_absolute_uri,
+            })
+    else:
+        return render_to_response("novels.html", {
             "query": raw_query,
             "all": show_all,
             "url": request.build_absolute_uri,
