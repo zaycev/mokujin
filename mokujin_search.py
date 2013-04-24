@@ -11,7 +11,7 @@ import re
 import sys
 import json
 
-from logicalform import MetaphorLF_Reader, POS
+from mokujin.logicalform import MetaphorLF_Reader, POS
 
 
 class SourceTargetSearcher(object):
