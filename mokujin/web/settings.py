@@ -9,7 +9,7 @@
 
 import os
 
-INDEX_DIR = ""
+INDEX_DIR = "/Users/zvm/code/mokujin/data/index"
 
 def project_dir(dir_name):
     return os.path.join(os.path.dirname(__file__), "..", dir_name)\
@@ -46,7 +46,7 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = (
     project_dir("web/static"),
 )
-print STATICFILES_DIRS
+
 STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
