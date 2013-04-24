@@ -99,13 +99,16 @@ class TripleIndex(object):
         return tuple(stamp)
 
     @staticmethod
-    def stamp2triple(stamp, id_term_map):
+    def stamp2triple(stamp, id_term_map, map_none=False):
         triple = [ID_REL_MAP[stamp[0]]]
         for i in range(1, len(stamp) - 1):
             if stamp[i] >= 0:
                 triple.append(id_term_map[stamp[i]])
             else:
-                triple.append(stamp[i])
+                if map_none:
+                    triple.append("<NONE>")
+                else:
+                    triple.append(stamp[i])
         triple.append(stamp[-1])
         return triple
 
@@ -269,9 +272,12 @@ class SearchEngine(object):
         for arg in arg_query:
             if isinstance(arg, list) or isinstance(arg, tuple):
                 term, pos = arg
-                if isinstance(term, unicode):
-                    term = term.encode("utf-8")
-                term_id = self.term_id_map.get(term)
+                if isinstance(term, basestring):
+                    if isinstance(term, unicode):
+                        term = term.encode("utf-8")
+                    term_id = self.term_id_map.get(term)
+                else:
+                    term_id = term
             elif isinstance(arg, basestring):
                 term, pos = arg, -1
                 if isinstance(term, unicode):
@@ -284,7 +290,6 @@ class SearchEngine(object):
             if term_id is not None and term_id in self.id_term_map:
                 norm_query.append((term_id, pos))
         results = []
-        print norm_query
         for term_id, pos in norm_query:
             try:
                 plist_data = self.arg_index.Get(numencode.encode_uint(term_id))
@@ -296,15 +301,20 @@ class SearchEngine(object):
             plist = [plist_el[0] for plist_el in plist]
             plist = set(plist)
             results.append(plist)
-        final_result = results[0]
-        for i in range(1, len(results)):
-            final_result ^= results[i]
-        results = [self.id_triple_map[triple_id] for triple_id in final_result]
-        return results
+        print results
+        if len(results) > 0:
+            final_result = results[0]
+            for i in range(1, len(results)):
+                final_result ^= results[i]
+            results = [self.id_triple_map[triple_id] for triple_id in final_result]
+            if rel_type is not None:
+                results = filter(lambda triple: triple[0] == rel_type, results)
+            return results
+        return []
 
     def print_result(self, search_result, max_results=10):
         print "FOUND: %d" % len(search_result)
-        for triple in search_result[:10]:
+        for triple in search_result[:max_results]:
             triple_str = "<Triple(%s, " % self.index.id_rel_map[triple[0]]
             for i in range(1, len(triple) - 1):
                 if triple[i] >= 0:
