@@ -28,7 +28,7 @@ class Query(object):
                 self.source_term_pos = i
 
     @staticmethod
-    def __exact_match__(triple_1, triple_2, ignore_pos):
+    def __exact__(triple_1, triple_2, ignore_pos):
         if len(triple_1) != len(triple_2):
             return False
         for i in xrange(len(triple_1)):
@@ -42,7 +42,7 @@ class Query(object):
         siblings = engine.search(rel_type=self.rel_constraint, arg_query=self.arg_constrains)
         siblings = filter(duplicate_flt, siblings)
         siblings = filter(len_constraint, siblings)
-        siblings = filter(lambda tr: Query.__exact_match__(tr, self.seed_triple, self.source_term_pos), siblings)
+        siblings = filter(lambda tr: Query.__exact__(tr, self.seed_triple, self.source_term_pos), siblings)
         return siblings
 
 
@@ -89,7 +89,7 @@ class MetaphorExplorer(object):
                     rel_id = sibling[0]
                     if novel_id in f3_counter[rel_id]:
                         f3_counter[rel_id][novel_id][0] += 1
-                        f3_counter[rel_id][novel_id][1] += sibling[-1]
+                        f3_counter[rel_id][novel_id][1] += seed_triple[-1] #sibling[-1]
                         f3_counter[rel_id][novel_id][2].append(sibling)
                     else:
                         f3_counter[rel_id][novel_id] = [1, sibling[-1], [sibling]]
@@ -117,19 +117,21 @@ class MetaphorExplorer(object):
         novels = reversed(siblings)
         return list(novels)
 
-    def find_novels2(self, term, threshold=10):
+    def find_novels2(self, term, threshold=0):
         term_id = self.engine.term_id_map.get(term)
         if term_id is None:
             return None
         seed_triples = self.engine.search(arg_query=(term_id,))
+        print "\tFOUND SEEDS FOR %s: %d" % (term, len(seed_triples))
         siblings = self.compute_f3(term_id, seed_triples)
+        print "\tFOUND SIBLINGS FOR %s: %d" % (term, len(siblings))
         novels = []
         for rel_id in siblings.keys():
             siblings_by_rel_id = siblings[rel_id]
             for novel_term_id, [novel_freq, total_freq, triples] in siblings_by_rel_id.iteritems():
                 if novel_freq > threshold:
                     novels.append((novel_term_id, novel_freq, total_freq, rel_id, triples))
-        novels.sort(key=lambda novel: -novel[1])
+        novels.sort(key=lambda novel: -novel[2])
         return novels
 
     def format_novel(self, novel):
