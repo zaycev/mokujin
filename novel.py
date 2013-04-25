@@ -7,6 +7,7 @@
 # For more information, see README.md
 # For license information, see LICENSE
 
+import csv
 import sys
 import logging
 
@@ -37,9 +38,17 @@ if __name__ == "__main__":
     threshold = int(sys.argv[2])
     data_dir = sys.argv[3]
     out_dir = sys.argv[4]
-
-
-
+    
+    ligths = set()
+    
+    reader = csv.reader(open("lights.txt", "r"), delimiter=" ", quotechar=" ")
+    for row in reader:
+        freq = float(row[1])
+        if freq >= 500.0:
+            ligths.add(row[2])
+        else:
+            break
+    
 
     logging.info("LOADING QUERY")
     query_json = open(query_file).read()
@@ -48,7 +57,7 @@ if __name__ == "__main__":
     logging.info("LOADING TRIPLES INDEX")
     indexer = TripleIndex(data_dir)
     engine = SearchEngine(indexer)
-    explorer = MetaphorExplorer(engine)
+    explorer = MetaphorExplorer(engine, lights=ligths)
 
     term = u"бедность".encode("utf-8")
     term_id = engine.term_id_map[term]

@@ -27,12 +27,11 @@ class Query(object):
             else:
                 self.source_term_pos = i
 
-    @staticmethod
-    def __exact__(triple_1, triple_2, ignore_pos):
-        if len(triple_1) != len(triple_2):
+    def exact(self, triple):
+        if len(self.seed_triple) != len(triple):
             return False
-        for i in xrange(len(triple_1)):
-            if i != ignore_pos and triple_1[i] != triple_2[i]:
+        for i in xrange(len(self.seed_triple)):
+            if i != self.source_term_pos and self.seed_triple[i] != triple[i]:
                 return False
         return True
 
@@ -41,17 +40,23 @@ class Query(object):
         len_constraint = lambda triple: len(triple) == len(self.seed_triple)
         siblings = engine.search(rel_type=self.rel_constraint, arg_query=self.arg_constrains)
         siblings = filter(duplicate_flt, siblings)
-        siblings = filter(len_constraint, siblings)
-        siblings = filter(lambda tr: Query.__exact__(tr, self.seed_triple, self.source_term_pos), siblings)
+        # siblings = filter(len_constraint, siblings)
+        # siblings = filter(lambda triple: self.exact(triple), siblings)
         return siblings
 
 
 class MetaphorExplorer(object):
 
-    def __init__(self, search_engine):
+    def __init__(self, search_engine, lights=None):
         self.engine = search_engine
         self.rel_id_map = REL_ID_MAP
         self.id_rel_map = ID_REL_MAP
+        self.lights = set()
+        if lights is not None:
+            for light_term in lights:
+                term_id = self.engine.term_id_map.get(light_term)
+                if term_id is not None:
+                    self.lights.add(term_id)
 
     def total_freq(self, term_id):
         freq = 0
@@ -80,9 +85,11 @@ class MetaphorExplorer(object):
         f3_counter = dict()
         for rel_id in self.id_rel_map.keys():
             f3_counter[rel_id] = dict()
+        siblings_num = 0
         for seed_triple in seed_triples:
             query = Query(term_id, seed_triple)
             siblings = query.find_siblings(self.engine)
+            siblings_num += len(siblings)
             for sibling in siblings:
                 novel_id = sibling[query.source_term_pos]
                 if novel_id >= 0:
@@ -93,7 +100,7 @@ class MetaphorExplorer(object):
                         f3_counter[rel_id][novel_id][2].append(sibling)
                     else:
                         f3_counter[rel_id][novel_id] = [1, sibling[-1], [sibling]]
-        return f3_counter
+        return f3_counter, siblings_num
 
     def compute_siblings(self, term_id, seed_triples, threshold=10):
         f4_triples = []
@@ -123,13 +130,13 @@ class MetaphorExplorer(object):
             return None
         seed_triples = self.engine.search(arg_query=(term_id,))
         print "\tFOUND SEEDS FOR %s: %d" % (term, len(seed_triples))
-        siblings = self.compute_f3(term_id, seed_triples)
-        print "\tFOUND SIBLINGS FOR %s: %d" % (term, len(siblings))
+        siblings, siblings_num = self.compute_f3(term_id, seed_triples)
+        print "\tFOUND SIBLINGS FOR %s: %d" % (term, siblings_num)
         novels = []
         for rel_id in siblings.keys():
             siblings_by_rel_id = siblings[rel_id]
             for novel_term_id, [novel_freq, total_freq, triples] in siblings_by_rel_id.iteritems():
-                if novel_freq > threshold:
+                if novel_freq > threshold and novel_term_id not in self.lights:
                     novels.append((novel_term_id, novel_freq, total_freq, rel_id, triples))
         novels.sort(key=lambda novel: -novel[2])
         return novels
