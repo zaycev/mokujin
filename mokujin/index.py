@@ -289,7 +289,7 @@ class SearchEngine(object):
                 term_id, pos = None, -1
             if term_id is not None and term_id in self.id_term_map:
                 norm_query.append((term_id, pos))
-        results = []
+        results = None
         for term_id, pos in norm_query:
             try:
                 plist_data = self.arg_index.Get(numencode.encode_uint(term_id))
@@ -300,16 +300,14 @@ class SearchEngine(object):
                 plist = filter(lambda plist_el: plist_el[1] == pos, plist)
             plist = [plist_el[0] for plist_el in plist]
             plist = set(plist)
-            results.append(plist)
-        if len(results) > 0:
-            final_result = results[0]
-            for i in range(1, len(results)):
-                final_result ^= results[i]
-            results = [self.id_triple_map[triple_id] for triple_id in final_result]
-            if rel_type is not None:
-                results = filter(lambda triple: triple[0] == rel_type, results)
-            return results
-        return []
+            if results is None:
+                results = plist
+            else:
+                results &= plist
+        results = [self.id_triple_map[triple_id] for triple_id in results]
+        if rel_type is not None:
+            results = filter(lambda triple: triple[0] == rel_type, results)
+        return results
 
     def print_result(self, search_result, max_results=10):
         for triple in search_result[:max_results]:
