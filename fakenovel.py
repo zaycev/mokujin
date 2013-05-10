@@ -64,22 +64,26 @@ if __name__ == "__main__":
     logging.info("LOADING INDEX")
     indexer = TripleIndex(args.data)
     engine = SearchEngine(indexer)
-    explorer = MetaphorExplorer(engine, lights=stop_terms)
+    explorer = MetaphorExplorer(engine)
+    stop_terms = explorer.map_stop_terms(stop_terms)
 
     for domain in novel_query:
         logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
         for term in domain.target_terms:
             fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
-            novels = explorer.find_novels2(term)
+            fl.write("fake_source, joined_freq, total_freq, norm_freq, joined_tfreq, total_tfreq, norm_tfreq\n")
+
+            novels = explorer.find_fake_sources(term, threshold=args.threshold2, stop_terms=stop_terms)
             if novels is None:
                 print
-                print "\tFOUND NOVELS FOR %s: %d" % (term, 0)
+                print "\tFOUND FAKE SOURCES FOR %s: %d" % (term, 0)
                 continue
             else:
-                print "\tFOUND NOVELS FOR %s: %d" % (term, len(novels))
+                print "\tFOUND FAKE SOURCES FOR %s: %d" % (term, len(novels))
             for novel in novels:
-                novel_term_id, freq, total_freq, rel_id, triples = novel
-                fl.write("%s\n" % explorer.format_novel2(novel))
+                fl.write("%s\n" % explorer.format_source_output_line(novel))
             print
 
             fl.close()
+
+    logging.info("DONE")
