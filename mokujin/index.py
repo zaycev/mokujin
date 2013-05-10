@@ -142,6 +142,7 @@ class TripleIndex(object):
             for i in xrange(len(batch)):
                 tr_id = batch_key * batch_size + i
                 id_triple_map[tr_id] = batch[i]
+        logging.info("INDEX: LOADED %d TRIPLES" % len(id_triple_map))
         return id_triple_map
 
     def __commit_terms(self, batch_size=64):
@@ -170,6 +171,7 @@ class TripleIndex(object):
             for i in xrange(len(batch)):
                 term_id = batch_key * batch_size + i
                 id_term_map[term_id] = batch[i]
+        logging.info("INDEX: LOADED %d TERMS" % len(id_term_map))
         return id_term_map
 
     def decode_posting_list(self, plist_data):
