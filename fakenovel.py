@@ -7,17 +7,10 @@
 # For more information, see README.md
 # For license information, see LICENSE
 
-# Usage
-#
-#
-#
-
 import csv
-import sys
 import logging
 import argparse
 
-from mokujin.index import ID_REL_MAP
 from mokujin.index import TripleIndex
 from mokujin.index import SearchEngine
 from mokujin.query import MetaphoricQuery
@@ -48,10 +41,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
-
-
     parser = argparse.ArgumentParser()
-
     parser.add_argument("-d", "--data", default="data/index", help="Mokujin data dir directory", type=str)
     parser.add_argument("-o", "--outputdir", default="output",
                         help="Directory where fake novel source words willbe placed",  type=str)
@@ -60,7 +50,6 @@ if __name__ == "__main__":
                         type=str)
     parser.add_argument("-t1", "--threshold1", default=500, help="Max frequecy treshold for light words", type=float)
     parser.add_argument("-t2", "--threshold2", default=5, help="Min frequecy treshold for seed triples", type=float)
-
     args = parser.parse_args()
 
     logging.info("DATA DIR: %s" % args.data)
