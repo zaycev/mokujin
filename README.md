@@ -1,6 +1,6 @@
 # MOKUJIN
 
-A a language-agnostic tolset for semantic triples extractions.
+A a language-agnostic toolset for semantic triples extraction.
 
 ## Relation Extractor
 
@@ -82,7 +82,7 @@ id(3).
 past(e22,e7) & past(e23,e16)
 ```
 
-**Output(List of Triples in CSV format):**
+**Output (List of Triples in CSV format):**
 
 ```
 rel_type,arg1,arg2,arg3,arg4,arg5,arg6,freq
