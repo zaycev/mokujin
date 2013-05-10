@@ -17,6 +17,7 @@ class POS(object):
     RB = 0x04
     PREP = 0x05
     PR = 0x06
+    ANY = 0x07
 
 
 class Args(object):
