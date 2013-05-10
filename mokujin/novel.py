@@ -37,11 +37,11 @@ class Query(object):
 
     def find_siblings(self, engine):
         duplicate_flt = lambda triple: triple[self.source_term_pos] != self.source_term_id
-        len_constraint = lambda triple: len(triple) == len(self.seed_triple)
+        # len_constraint = lambda triple: len(triple) == len(self.seed_triple)
         siblings = engine.search(rel_type=self.rel_constraint, arg_query=self.arg_constrains)
         siblings = filter(duplicate_flt, siblings)
-        siblings = filter(len_constraint, siblings)
-        siblings = filter(lambda triple: self.exact(triple), siblings)
+        # siblings = filter(len_constraint, siblings)
+        # siblings = filter(lambda triple: self.exact(triple), siblings)
         return siblings
 
 
@@ -115,16 +115,15 @@ class MetaphorExplorer(object):
                 ignored += 1
                 continue
             total_freq, total_tfreq = self.term_freq(fake_source_term_id, threshold=threshold)
-            norm_freq = float(joined_freq) / float(target_freq)
-            norm_tfreq = float(joined_tfreq) / float(target_tfreq)
+            norm_freq = float(joined_freq) / float(total_freq)
+            norm_tfreq = float(joined_tfreq) / float(total_tfreq)
             fake_sources.append((
                 fake_source_term_id,
                 joined_freq, total_freq, norm_freq,
                 joined_tfreq, total_tfreq, norm_tfreq,
                 triples
             ))
-
-        fake_sources.sort(key=lambda source_row: -source_row[6])
+        fake_sources.sort(key=lambda source_row: -source_row[4])
 
         print "\tSTOPS IGNORED: %d" % ignored
         return fake_sources
