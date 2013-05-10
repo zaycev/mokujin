@@ -2,6 +2,16 @@
 
 A a language-agnostic tolset for semantic triples extractions.
 
+## Relation Extractor
+
+Usage:
+
+```
+python mokujin.py [<input file in logical form>] [<output file>]
+```
+
+### Features
+
 * Input format are sentences in first-order logic form produced by [Metaphor](https://github.com/metaphor-adp/Metaphor-ADP) semantic pipelines.
 * Extracts the following relationships:
 
@@ -33,4 +43,6 @@ A a language-agnostic tolset for semantic triples extractions.
   
   **Verbs**
 
-  1. `compl(anything,anything) ("близкий мне")` 
+  1. `compl(anything,anything) ("близкий мне")`
+  
+## Mapping Instances to Classes
