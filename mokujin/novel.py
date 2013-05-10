@@ -123,7 +123,7 @@ class MetaphorExplorer(object):
                 joined_tfreq, total_tfreq, norm_tfreq,
                 triples
             ))
-        fake_sources.sort(key=lambda source_row: -source_row[4])
+        fake_sources.sort(key=lambda source_row: -source_row[5])
 
         print "\tSTOPS IGNORED: %d" % ignored
         return fake_sources
