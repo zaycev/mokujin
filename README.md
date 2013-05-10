@@ -1,78 +1,16 @@
 # MOKUJIN
 
-Language-agnostic exractor for binary relationships from natural language sentences.
+A a language-agnostic tolset for semantic triples extractions.
 
-### Example of work:
-
-The input should be in the format of Logical Form (can be produced, for example, by [these](https://github.com/metaphor-adp/Metaphor-ADP/tree/master/pipelines) pipelines).
-
-**Russian**:
-
-```
-% Президент сказал , что уходит .
-id(1).
-[1001]:президент-nn(e1,x1) & [1002]:сказать-vb(e2,x1,e3,u1) & [1005]:уходить-vb(e3,u2,u3,u4) & past(e4,e2)
-
-% Прокуратура намерена добиваться уголовного преследования Ахмеда Билалова , уволенного с поста председателя совета директоров ОАО ' Курорты Северного Кавказа ' после критики Владимира Путина .
-id(2).
-[2001]:прокуратура-nn(e1,x1) & [2002]:намерен-adj(e2,x2) & [2003]:добиваться-vb(e3,u1,x3,u2) & [2004]:уголовный-adj(e4,x3) & [2005]:преследование-nn(e5,x3) & [2006]:ахмед-nn(e6,x4) & [2007]:билалов-nn(e7,x5) & [2009]:уволить-vb(e8,u3,x4,u4) & [2010]:с-in(e9,e8,x6) & [2011]:пост-nn(e10,x6) & [2012]:председатель-nn(e11,x7) & [2013]:совет-nn(e12,x8) & [2014]:директор-nn(e13,x9) & [2015]:оао-nn(e14,x10) & [2017]:курорт-nn(e15,x11) & [2018]:северный-adj(e16,x12) & [2019]:кавказ-nn(e17,x12) & [2021]:после-in(e18,x13,x14) & [2022]:критика-nn(e19,x14) & [2023]:владимир-nn(e20,x15) & [2024]:путин-nn(e21,x15) & compl(e22,e2,e3) & of-in(e23,x4,x5) & of-in(e24,x6,x7) & of-in(e25,x7,x8) & of-in(e26,x8,x9) & typelt(e27,x9,s1) & of-in(e28,x9,x10) & typelt(e29,x11,s2) & of-in(e30,x11,x12) & of-in(e31,x14,x15) & past(e32,e8)
-
-% Впервые призрак политической реакции материализовался в современной России еще в 2012 году , когда недоверие власти к гражданам вылилось в целый ряд спорных законодательных инициатив .
-id(3).
-[3001]:впервые-rb(e1,e5) & [3002]:призрак-nn(e2,x1) & [3003]:политический-adj(e3,x2) & [3004]:реакция-nn(e4,x2) & [3005]:материализоваться-vb(e5,x1,e1,u1) & [3006]:в-in(e6,e5,x3) & [3007]:современный-adj(e7,x3) & [3008]:россия-nn(e8,x3) & [3009]:еще-rb(e9,e10) & [3010]:в-in(e10,e5,x4) & [3012]:год-nn(e11,x4) & [3015]:недоверие-nn(e12,x5) & [3016]:власть-nn(e13,x6) & [3017]:к-in(e14,x5,x7) & [3018]:гражданин-nn(e15,x7) & [3019]:вылиться-vb(e16,x5,u2,u3) & [3020]:в-in(e17,e16,x8) & [3021]:целый-adj(e18,x8) & [3022]:ряд-nn(e19,x8) & [3023]:спорный-adj(e20,x9) & [3024]:законодательный-adj(e21,x9) & [3025]:инициатива-nn(e22,x9) & card(e23,x4,2012) & of-in(e24,x1,x2) & of-in(e25,x5,x6) & typelt(e26,x7,s1) & of-in(e27,x8,x9) & typelt(e28,x9,s2) & past(e29,e5) & past(e30,e16)
-
-% Однако его новая инкарнация грозит неприятностями уже не только тем , у кого есть стилистические разногласия с Кремлем , но и преданным лоялистам .
-id(4).
-male(e1,x1) & [4003]:новый-adj(e2,x2) & [4004]:инкарнация-nn(e3,x2) & [4005]:грозить-vb(e4,x2,x1,u1) & [4006]:неприятность-nn(e5,x3) & [4007]:уже-rb(e6,e7) & [4010]:то-pr(e7,x4) & [4012]:у-in(e8,x5,x6) & [4015]:стилистический-adj(e9,x5) & [4016]:разногласие-nn(e10,x5) & [4017]:с-in(e11,x5,x7) & [4018]:кремль-nn(e12,x7) & [4022]:преданный-adj(e13,x8) & [4023]:лоялистам-nn(e14,x9) & instr(e15,e4,x3) & equal(e16,x5,x9) & typelt(e17,x3,s1) & typelt(e18,x5,s2)
-
-% Бегство в Германию Ахмеда Билалова ( и его брата Магомеда ) , бывшего председателя совета директоров ОАО ' Курорты Северного Кавказа ' и вице-президента Олимпийского комитета России , стало неожиданностью .
-id(5).
-[5001]:бегство-nn(e1,x1) & [5002]:в-in(e2,x1,x2) & [5003]:германия-nn(e3,x2) & [5004]:ахмед-nn(e4,x3) & [5005]:билалов-nn(e5,x4) & male(e6,x5) & [5009]:брат-nn(e7,x6) & [5010]:магомед-nn(e8,x6) & [5013]:бывший-adj(e9,x7) & [5014]:председатель-nn(e10,x7) & [5015]:совет-nn(e11,x8) & [5016]:директор-nn(e12,x9) & [5017]:оао-nn(e13,x10) & [5019]:курорт-nn(e14,x11) & [5020]:северный-adj(e15,x12) & [5021]:кавказ-nn(e16,x12) & [5024]:вице-президента-nn(e17,x13) & [5025]:олимпийский-adj(e18,x14) & [5026]:комитет-nn(e19,x14) & [5027]:россия-nn(e20,x15) & [5029]:стать-vb(e21,x1,u1,u2) & [5030]:неожиданность-nn(e22,x16) & of-in(e23,x6,x5) & instr(e24,e21,x16) & of-in(e25,x3,x4) & of-in(e26,x6,x7) & of-in(e27,x7,x8) & of-in(e28,x8,x9) & typelt(e29,x9,s1) & of-in(e30,x9,x10) & typelt(e31,x11,s2) & of-in(e32,x11,x12) & of-in(e33,x13,x14) & of-in(e34,x14,x15) & past(e35,e21)
-```
-
-`=>`
-
-```
-subj_verb_prep_compl, бегство-NN, стать-VB, None-<NONE>, неожиданность-NN, <->, 2
-subj_verb_prep_compl, призрак-NN, материализоваться-VB, впервые-RB, власть-NN, <->, 1
-compl, намерен-ADJ, добиваться-VB, <->, <->, <->, 1
-subj_verb_dirobj, недоверие-NN, вылиться-VB, россия-NN, <->, <->, 1
-subj_verb_prep_compl, бегство-NN, стать-VB, None-<NONE>, курорт-NN, <->, 1
-noun_adj, кавказ-NN, северный-ADJ, <->, <->, <->, 1
-noun_adj, ряд-NN, целый-ADJ, <->, <->, <->, 1
-subj_verb_prep_compl, инкарнация-NN, грозить-VB, None-<NONE>, неприятность-NN, <->, 1
-subj_verb_prep_compl, призрак-NN, материализоваться-VB, впервые-RB, россия-NN, <->, 1
-subj_verb_dirobj, недоверие-NN, вылиться-VB, гражданин-NN, <->, <->, 1
-subj_verb_prep_compl, призрак-NN, материализоваться-VB, None-<NONE>, гражданин-NN, <->, 1
-```
-
-**English**:
-
-```
-TODO
-```
-`=>`
-
-```
-TODO
-```
-
-
-
-## 1. Corpora
-
-### Spanish
-
-1. [European Parliament Proceedings Parallel Corpus 1996-2011](http://www.statmt.org/europarl/)
-1. [Ancora](http://clic.ub.edu/corpus/en/ancora-descarregues)
-
-### Russian
-
-1. [Open Corpora](http://opencorpora.org/)
-1. [English-Russian temporally aligned corpus](http://cogcomp.cs.illinois.edu/page/resources/data)
-
-### Farsi
-
-1. [Hamshahri Collection V2](http://ece.ut.ac.ir/dbrg/Hamshahri/download.html#version2)
-
-### English
+* Input format are sentences in first-order logic form produced by [Metaphor](https://github.com/metaphor-adp/Metaphor-ADP) semantic pipelines.
+* Extracts the following relationships:
+  1. `subj_verb_dirobj([noun*],verb,[noun+]) ("John reads a book")`
+  1. `subj_verb_indirobj([noun*],verb,[noun+]) ("John gives to Mary")`
+  1. `subj_verb_instr([noun*],verb,[noun+]) ("Джон работает топором")`
+  1. ` subj_verb([noun+], verb) ("John runs") // only if there is no dirobj and indirobj`
+  1. `subj_verb_prep_compl([noun*],verb,prep,[noun+]) ("John comes from London")`
+  1. `subj_verb_verb_prep_noun([noun*],verb,verb,prep,[noun+]) ("John tries to go into the house")`
+  1. `subj_verb_verb([noun+],verb,verb) ("John tries to go") -> only if there is no prep attached to the second verb`
+  1. `noun_be_prep_noun(noun,verb,prep,noun) ("intention to leave for money")`
+  1. `noun_be(noun,verb) ("intention to leave") -> only if there is no prep attached to verb`
+ 
