@@ -27,21 +27,21 @@ for rel in ACTUAL_RELS:
 
 
 REL_POS_MAP = {
-    mtr.DepVerb_SubjVerbDirobj.rel_name: (POS.NN, POS.VB, POS.NN, ),
-    mtr.DepVerb_SubjVerbIndirobj.rel_name: (POS.NN, POS.VB, POS.NN, ),
-    mtr.DepVerb_SubjVerbInstr.rel_name: (POS.NN, POS.VB, POS.NN, ),
-    mtr.DepVerb_SubjVerb.rel_name: (POS.NN, POS.VB, ),
-    mtr.DepVerb_PrepCompl.rel_name: (POS.NN, POS.VB, POS.PREP, POS.NN, ),
-    mtr.DepVerb_SubjVerbVerbPrepNoun.rel_name: (POS.NN, POS.VB, POS.VB, POS.PREP, POS.NN, ),
-    mtr.DepVerb_SubjVerbVerb.rel_name: (POS.NN, POS.VB, POS.VB, ),
-    mtr.DepAdj_NounAdj.rel_name: (POS.NN, POS.ADJ, ),
-    mtr.DepAdv_VerbNounAdv.rel_name: (POS.NN, POS.VB, POS.RB, ),
-    mtr.DepNoun_NounEqualPrepNoun.rel_name: (POS.NN, POS.NN, POS.PREP, POS.NN, ),
-    mtr.DepNoun_NounNoun.rel_name: (POS.NN, POS.NN, ),
-    mtr.DepNoun_NounNounNoun.rel_name: (POS.NN, POS.NN, POS.NN, ),
-    mtr.DepNoun_NounEqualNoun.rel_name: (POS.NN, POS.NN, ),
-    mtr.DepNoun_NounPrepNoun.rel_name: (POS.NN, POS.PREP, POS.NN, ),
-    mtr.DepAny_Compl.rel_name: (POS.ANY, POS.ANY, ),
+    REL_ID_MAP[mtr.DepVerb_SubjVerbDirobj.rel_name]: (POS.NN, POS.VB, POS.NN, ),
+    REL_ID_MAP[mtr.DepVerb_SubjVerbIndirobj.rel_name]: (POS.NN, POS.VB, POS.NN, ),
+    REL_ID_MAP[mtr.DepVerb_SubjVerbInstr.rel_name]: (POS.NN, POS.VB, POS.NN, ),
+    REL_ID_MAP[mtr.DepVerb_SubjVerb.rel_name]: (POS.NN, POS.VB, ),
+    REL_ID_MAP[mtr.DepVerb_PrepCompl.rel_name]: (POS.NN, POS.VB, POS.PREP, POS.NN, ),
+    REL_ID_MAP[mtr.DepVerb_SubjVerbVerbPrepNoun.rel_name]: (POS.NN, POS.VB, POS.VB, POS.PREP, POS.NN, ),
+    REL_ID_MAP[mtr.DepVerb_SubjVerbVerb.rel_name]: (POS.NN, POS.VB, POS.VB, ),
+    REL_ID_MAP[mtr.DepAdj_NounAdj.rel_name]: (POS.NN, POS.ADJ, ),
+    REL_ID_MAP[mtr.DepAdv_VerbNounAdv.rel_name]: (POS.NN, POS.VB, POS.RB, ),
+    REL_ID_MAP[mtr.DepNoun_NounEqualPrepNoun.rel_name]: (POS.NN, POS.NN, POS.PREP, POS.NN, ),
+    REL_ID_MAP[mtr.DepNoun_NounNoun.rel_name]: (POS.NN, POS.NN, ),
+    REL_ID_MAP[mtr.DepNoun_NounNounNoun.rel_name]: (POS.NN, POS.NN, POS.NN, ),
+    REL_ID_MAP[mtr.DepNoun_NounEqualNoun.rel_name]: (POS.NN, POS.NN, ),
+    REL_ID_MAP[mtr.DepNoun_NounPrepNoun.rel_name]: (POS.NN, POS.PREP, POS.NN, ),
+    REL_ID_MAP[mtr.DepAny_Compl.rel_name]: (POS.ANY, POS.ANY, ),
 }
 
 

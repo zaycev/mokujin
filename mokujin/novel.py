@@ -9,8 +9,10 @@
 
 import logging
 
+from mokujin.logicalform import POS
 from mokujin.index import REL_ID_MAP
 from mokujin.index import ID_REL_MAP
+from mokujin.index import REL_POS_MAP
 
 
 class Query(object):
@@ -21,7 +23,7 @@ class Query(object):
         self.arg_constrains = []
         self.source_term_id = source_term_id
         self.source_term_pos = -1
-        for i in range(1, len(seed_triple) - 1):
+        for i in xrange(1, len(seed_triple) - 1):
             if seed_triple[i] != source_term_id and seed_triple[i] >= 0:
                 self.arg_constrains.append((seed_triple[i], i))
             else:
@@ -47,15 +49,17 @@ class Query(object):
 
 class MetaphorExplorer(object):
 
-    def __init__(self, search_engine):
+    def __init__(self, search_engine, stop_terms=set()):
         self.engine = search_engine
         self.rel_id_map = REL_ID_MAP
         self.id_rel_map = ID_REL_MAP
+        self.stop_terms = self.map_stop_terms(stop_terms)
 
     def term_freq(self, term_id, threshold=0.0):
         freq = 0.0
         tfreq = 0.0
         triples = self.engine.search(arg_query=(term_id,))
+        triples = filter(lambda tr: not self.is_light_triple(tr), triples)
         for triple in triples:
             triple_freq = triple[-1]
             if triple_freq > threshold:
@@ -63,12 +67,26 @@ class MetaphorExplorer(object):
                 tfreq += triple[-1]
         return freq, tfreq
 
+    def is_light_triple(self, triple):
+        pos_tags = REL_POS_MAP[triple[0]]
+        not_light = 0
+        for i in range(1, len(triple) - 1):
+            if triple[i] not in self.stop_terms and pos_tags[i - 1] is not POS.PREP:
+                not_light += 1
+            if not_light == 2:
+                return False
+        # print
+        # for term_id in triple[1:(len(triple) - 1)]:
+        #     print self.engine.id_term_map[term_id]
+        return True
+
     def compute_f3(self, term_id, seed_triples):
         f3_counter = dict()
         siblings_num = 0
         for seed_triple in seed_triples:
             query = Query(term_id, seed_triple)
             siblings = query.find_siblings(self.engine)
+            siblings = filter(lambda tr: not self.is_light_triple(tr), siblings)
             siblings_num += len(siblings)
             for sibling in siblings:
                 novel_id = sibling[query.source_term_pos]
@@ -94,7 +112,7 @@ class MetaphorExplorer(object):
                 print "\tNOT FOUND: %s" % term
         return stop_terms_ids
 
-    def find_fake_sources(self, term, threshold=0, stop_terms=set()):
+    def find_fake_sources(self, term, threshold=0):
         term_id = self.engine.term_id_map.get(term)
         if term_id is None:
             return None
@@ -105,13 +123,15 @@ class MetaphorExplorer(object):
         print "\tFOUND SEEDS FOR %s: %d" % (term, len(seed_triples))
         seed_triples = filter(lambda s: s[-1] > threshold, seed_triples)
         print "\tAFTER FILTERING (f>=%f): %d" % (threshold, len(seed_triples))
+        seed_triples = filter(lambda tr: not self.is_light_triple(tr), seed_triples)
+        print "\tAFTER IGNORING LIGHT TRIPLES: %d" % len(seed_triples)
         siblings, siblings_num = self.compute_f3(term_id, seed_triples)
         print "\tFOUND SIBLINGS FOR %s: %d" % (term, siblings_num)
         fake_sources = []
         ignored = 0
 
         for fake_source_term_id, [joined_freq, joined_tfreq, triples] in siblings.iteritems():
-            if fake_source_term_id in stop_terms:
+            if fake_source_term_id in self.stop_terms:
                 ignored += 1
                 continue
             total_freq, total_tfreq = self.term_freq(fake_source_term_id, threshold=threshold)
