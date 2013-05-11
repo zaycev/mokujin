@@ -331,6 +331,8 @@ class SearchEngine(object):
                 results = plist
             else:
                 results &= plist
+        if results is None:
+            return ()
         results = [self.id_triple_map[triple_id] for triple_id in results]
         if rel_type is not None:
             results = filter(lambda triple: triple[0] == rel_type, results)
