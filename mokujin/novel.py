@@ -166,7 +166,7 @@ class MetaphorExplorer(object):
                 else:
                     triples_str += "NONE"
             triples_str += ", %d}  " % triple[-1]
-        return "%s, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f // %s" % (
+        return "%s, %d, %d, %.6f, %d, %d, %.6f // %s" % (
             self.engine.id_term_map[fake_source_term_id],
             joined_freq, total_freq, norm_freq,
             joined_tfreq, total_tfreq, norm_tfreq,
