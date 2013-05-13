@@ -112,44 +112,65 @@ class MetaphorExplorer(object):
                 print "\tNOT FOUND: %s" % term
         return stop_terms_ids
 
-    def find_fake_sources(self, term, threshold=0):
+    def find_potential_sources(self, term, threshold=0):
+        """
+        Find all potential sources for given target term and calculate their frequencies.
+        """
+
         term_id = self.engine.term_id_map.get(term)
         if term_id is None:
             return None
+        # retrieving all triples containing target term
         seed_triples = self.engine.search(arg_query=(term_id,))
+        # calculating their frequency
         target_freq = len(seed_triples)
+        # calculating their total frequency
         target_tfreq = sum([seed[-1] for seed in seed_triples])
         print "\tTARGET FREQ: %d, %d" % (target_freq, target_tfreq)
         print "\tFOUND SEEDS FOR %s: %d" % (term, len(seed_triples))
-        seed_triples = filter(lambda s: s[-1] > threshold, seed_triples)
+        # remove all triples with frequency less then the threshold
+        seed_triples = filter(lambda s: s[-1] >= threshold, seed_triples)
         print "\tAFTER FILTERING (f>=%f): %d" % (threshold, len(seed_triples))
+        # remove all triples containing less than 2 non-stop words (light triples)
         seed_triples = filter(lambda tr: not self.is_light_triple(tr), seed_triples)
         print "\tAFTER IGNORING LIGHT TRIPLES: %d" % len(seed_triples)
+        # retrieve siblings - triples containing the same arguments as seed triples
+        # sibling(target, source) is triple (a_1, .., source, .., a_n) such as: exist triple (a_1, .., target, .., a_n)
         siblings, siblings_num = self.compute_f3(term_id, seed_triples)
         print "\tFOUND SIBLINGS FOR %s: %d" % (term, siblings_num)
-        fake_sources = []
+        potential_sources = []
         ignored = 0
 
-        for fake_source_term_id, [joined_freq, joined_tfreq, triples] in siblings.iteritems():
-            if fake_source_term_id in self.stop_terms:
+        # calculating normalized frequencies
+        # joined_freq   - number of siblings for given source and target terms
+        # joined_tfreq  - total frequency of siblings for given source and target terms
+        for source_term_id, [joined_freq, joined_tfreq, triples] in siblings.iteritems():
+            if source_term_id in self.stop_terms:
                 ignored += 1
                 continue
-            total_freq, total_tfreq = self.term_freq(fake_source_term_id, threshold=threshold)
+            total_freq, total_tfreq = self.term_freq(source_term_id, threshold=threshold)
             norm_freq = float(joined_freq) / float(total_freq)
             norm_tfreq = float(joined_tfreq) / float(total_tfreq)
-            fake_sources.append((
-                fake_source_term_id,
+            potential_sources.append((
+                source_term_id,
                 joined_freq, total_freq, norm_freq,
                 joined_tfreq, total_tfreq, norm_tfreq,
                 triples
             ))
-        fake_sources.sort(key=lambda source_row: -source_row[5])
-
         print "\tSTOPS IGNORED: %d" % ignored
-        return fake_sources
+        # sort output by <total_tfreq> value (#5), other options
+        # 0 - source_term_id
+        # 1 - joined_freq
+        # 2 - total_freq
+        # 3 - norm_freq
+        # 4 - joined_tfreq
+        # 5 - total_tfreq
+        # 6 - norm_tfreq
+        potential_sources.sort(key=lambda source_row: -source_row[5])
+        return potential_sources
 
     def format_source_output_line(self, source_row):
-        fake_source_term_id, \
+        potential_source_term_id, \
         joined_freq, total_freq, norm_freq, \
         joined_tfreq, total_tfreq, norm_tfreq, \
         triples = source_row
@@ -167,7 +188,7 @@ class MetaphorExplorer(object):
                     triples_str += "NONE"
             triples_str += ", %d}  " % triple[-1]
         return "%s, %d, %d, %.6f, %d, %d, %.6f // %s" % (
-            self.engine.id_term_map[fake_source_term_id],
+            self.engine.id_term_map[potential_source_term_id],
             joined_freq, total_freq, norm_freq,
             joined_tfreq, total_tfreq, norm_tfreq,
             triples_str,
