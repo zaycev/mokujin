@@ -70,9 +70,9 @@ if __name__ == "__main__":
         logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
         for term in domain.target_terms:
             fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
-            fl.write("fake_source, joined_freq, total_freq, norm_freq, joined_tfreq, total_tfreq, norm_tfreq\n")
+            fl.write("potential_source, joined_freq, total_freq, norm_freq, joined_tfreq, total_tfreq, norm_tfreq\n")
 
-            novels = explorer.find_fake_sources(term, threshold=args.threshold2)
+            novels = explorer.find_potential_sources(term, threshold=args.threshold2)
             if novels is None:
                 print
                 print "\tFOUND FAKE SOURCES FOR %s: %d" % (term, 0)
