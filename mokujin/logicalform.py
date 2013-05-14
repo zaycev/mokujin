@@ -372,7 +372,7 @@ class Sentence(object):
             yield pred
 
 
-class MetaphorLF_Reader(object):
+class MetaphorAdpLF_Reader(object):
 
     def __init__(self, lf_file):
         self.lf_file = lf_file
