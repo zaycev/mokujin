@@ -9,7 +9,7 @@
 
 import sys
 
-from mokujin.logicalform import MetaphorLF_Reader
+from mokujin.logicalform import MetaphorAdpLF_Reader
 from mokujin.triples import TripleExtractor, TripleFold, Triple
 from mokujin.triples import ACTUAL_RELS as RELS
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         ifile = sys.stdin
         ofile = sys.stdout
 
-    reader = MetaphorLF_Reader(ifile)
+    reader = MetaphorAdpLF_Reader(ifile)
     i_sents = reader.i_sentences()
 
     ex = TripleExtractor(triple_patterns=RELS)

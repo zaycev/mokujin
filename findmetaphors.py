@@ -11,7 +11,12 @@ import re
 import sys
 import json
 
-from mokujin.logicalform import MetaphorLF_Reader, POS
+from mokujin.logicalform import MetaphorAdpLF_Reader, POS
+
+
+
+
+
 
 
 class SourceTargetSearcher(object):
@@ -159,7 +164,7 @@ if __name__ == "__main__":
 
     query = json.loads(open(query_file, "r").read().decode("utf-8"))
 
-    reader = MetaphorLF_Reader(ifile)
+    reader = MetaphorAdpLF_Reader(ifile)
     i_sents = reader.i_sentences()
     searcher = SourceTargetSearcher(query)
 
