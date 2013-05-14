@@ -11,6 +11,7 @@ import os
 
 INDEX_DIR = "/Users/zvm/code/mokujin/data/index"
 
+
 def project_dir(dir_name):
     return os.path.join(os.path.dirname(__file__), "..", dir_name)\
         .replace("\\", "//")

@@ -47,7 +47,7 @@ class Query(object):
         return siblings
 
 
-class MetaphorExplorer(object):
+class TripleStoreExplorer(object):
 
     def __init__(self, search_engine, stop_terms=set()):
         self.engine = search_engine
