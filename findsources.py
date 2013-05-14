@@ -13,11 +13,9 @@ import argparse
 
 from mokujin.index import TripleIndex
 from mokujin.index import SearchEngine
-from mokujin.query import MetaphoricQuery
-from mokujin.novel import MetaphorExplorer
+from mokujin.query import DomainSearchQuery
+from mokujin.triplexplore import TripleStoreExplorer
 from mokujin.misc import transliterate_ru
-
-FILES = dict()
 
 
 def load_stop_terms(file_path, threshold=500.0):
@@ -60,13 +58,13 @@ if __name__ == "__main__":
     logging.info("T2: %f" % args.threshold2)
 
     stop_terms = load_stop_terms(args.stopterms, threshold=args.threshold1)
-    novel_query = MetaphoricQuery.fromstring(open(args.queryfile).read())
+    query = DomainSearchQuery.fromstring(open(args.queryfile).read())
     logging.info("LOADING INDEX")
     indexer = TripleIndex(args.data)
     engine = SearchEngine(indexer)
-    explorer = MetaphorExplorer(engine, stop_terms=stop_terms)
+    explorer = TripleStoreExplorer(engine, stop_terms=stop_terms)
 
-    for domain in novel_query:
+    for domain in query:
         logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
         for term in domain.target_terms:
             fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")

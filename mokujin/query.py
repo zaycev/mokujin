@@ -18,7 +18,7 @@ class Domain(object):
         self.source_terms = [t.encode("utf-8").replace(" ", "&") for t in source_terms]
 
 
-class MetaphoricQuery(object):
+class DomainSearchQuery(object):
 
     def __init__(self, domains):
         self.domains = domains
@@ -32,7 +32,7 @@ class MetaphoricQuery(object):
             target_terms = domain_node["target"]
             source_terms = domain_node["source"]
             domains.append(Domain(label, target_terms, source_terms))
-        return MetaphoricQuery(domains)
+        return DomainSearchQuery(domains)
 
     def __iter__(self):
         for domain in self.domains:
