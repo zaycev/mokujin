@@ -110,6 +110,7 @@ class TripleStoreExplorer(object):
             term_id = self.engine.term_id_map.get(term, -1)
             if term_id == -1:
                 print "\tNOT FOUND: %s" % term
+        stop_terms_ids.add(-1)
         return stop_terms_ids
 
     def find_potential_sources(self, term, threshold=0):
