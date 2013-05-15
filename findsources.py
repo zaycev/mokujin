@@ -12,7 +12,7 @@ import logging
 import argparse
 
 from mokujin.index import TripleIndex
-from mokujin.index import SearchEngine
+from mokujin.index import TripleSearchEngine
 from mokujin.query import DomainSearchQuery
 from mokujin.triplexplore import TripleStoreExplorer
 from mokujin.misc import transliterate_ru
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     query = DomainSearchQuery.fromstring(open(args.queryfile).read())
     logging.info("LOADING INDEX")
     indexer = TripleIndex(args.data)
-    engine = SearchEngine(indexer)
+    engine = TripleSearchEngine(indexer)
     explorer = TripleStoreExplorer(engine, stop_terms=stop_terms)
 
     for domain in query:

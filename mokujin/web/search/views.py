@@ -12,13 +12,13 @@
 import itertools
 
 from mokujin.index import TripleIndex
-from mokujin.index import SearchEngine
+from mokujin.index import TripleSearchEngine
 from mokujin.web.settings import INDEX_DIR
 from django.shortcuts import render_to_response
 
 
 indexer = TripleIndex(INDEX_DIR)
-engine = SearchEngine(indexer)
+engine = TripleSearchEngine(indexer)
 
 
 class SearchResultWrapper(object):

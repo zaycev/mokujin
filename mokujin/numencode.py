@@ -87,3 +87,30 @@ def update_plist(plist_data, new_plist):
     delta_encode(tid_arr)
     sz = array.array("L", [sz + len(new_plist)])
     return sz.tostring() + pos_arr.tostring() + tid_arr.tostring()
+
+
+def encode_1d_plist(plist):
+    tid_arr = array.array("l", [0] * len(plist))
+    i = 0
+    while i < len(plist):
+        tid_arr[i] = plist[i][0]
+        i += 1
+    delta_encode(tid_arr)
+    return tid_arr.tostring()
+
+
+def decode_1d_plist(plist_data):
+    tid_arr = array.array("l")
+    tid_arr.fromstring(plist_data)
+    delta_decode(tid_arr)
+    return tid_arr
+
+
+def update_1d_plist(plist_data, new_plist):
+    tid_arr = array.array("l")
+    tid_arr.fromstring(plist_data)
+    delta_decode(tid_arr)
+    for tr_id in new_plist:
+        tid_arr.append(tr_id)
+    delta_encode(tid_arr)
+    return tid_arr.tostring()
