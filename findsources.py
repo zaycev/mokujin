@@ -82,5 +82,4 @@ if __name__ == "__main__":
             print
 
             fl.close()
-
     logging.info("DONE")
