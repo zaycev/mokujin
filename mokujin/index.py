@@ -59,7 +59,7 @@ class ArgType(object):
 
 
 class TripleReader(object):
-    
+
     def parse_triple_row(self, ts_row):
         arguments = []
         for i in range(1, (len(ts_row) - 1)):
@@ -352,16 +352,14 @@ class TripleSearchEngine(object):
 
 class SimpleObjectIndex(object):
 
-    def __init__(self, data_dir, obj_to_terms, obj_to_str, str_to_obj, text_to_obj):
+    def __init__(self, data_dir, obj_to_terms, obj_to_str, str_to_obj):
         self.data_dir = data_dir
         self.obj_to_terms = obj_to_terms
         self.obj_to_str = obj_to_str
         self.str_to_obj = str_to_obj
-        self.text_to_obj = text_to_obj
         self.id_term_map = None
         self.term_id_map = None
-        self.post_lists = None
-        self.id_obj_map = None
+        self.objnum = 0
         try:
             import lz4 as compressor
             self.compress = compressor.compress
@@ -372,6 +370,33 @@ class SimpleObjectIndex(object):
             self.compress = lambda data: compressor.compress(data, 3)
             self.compressHC = lambda data: compressor.compress(data, 9)
             self.decompress = lambda data: compressor.decompress(data)
+    
+    def load_all(self):
+        id_term_map = self.load_terms()
+        self.id_term_map = [None] * len(id_term_map)
+        self.term_id_map = dict()
+        for term_id, term in id_term_map.iteritems():
+            self.id_term_map[term_id] = term
+            self.term_id_map[term] = term_id
+        self.objnum = self.load_objnum()
+            
+    def load_objnum(self):
+        objnum_fl_path = "%s/OBJNUM" % self.data_dir
+        try:
+           with open(objnum_fl_path, "r") as objnum_fl:
+               objnum = int(objnum_fl.read())
+        except IOError:
+            objnum = 0
+        logging.info("LOADED DOCNUM %d" % objnum)
+        return objnum
+    
+    def update_objnum(self, new_objnum):
+        objnum_fl_path = "%s/OBJNUM" % self.data_dir
+        prev_objnum = self.load_objnum()
+        with open(objnum_fl_path, "w") as objnum_fl:
+            objnum_fl.write(str(new_objnum))
+        logging.info("OBJNUM updated %d => %d [+%d]" % (prev_objnum, new_objnum, new_objnum - prev_objnum))
+        return new_objnum - prev_objnum
 
     def decode_posting_list(self, plist_blob):
         plist = numencode.decode_1d_plist(self.decompress(plist_blob))
@@ -388,11 +413,15 @@ class SimpleObjectIndex(object):
     def update_posting_lists(self, post_lists):
         plist_store = leveldb.LevelDB("%s/plist.index" % self.data_dir)
         w_batch = leveldb.WriteBatch()
+        upd_num = 0
+        new_num = 0
         for term_id, plist in post_lists.iteritems():
             term_key = numencode.encode_uint(term_id)
             try:
                 old_plist_blob = plist_store.Get(term_key)
+                upd_num += 1
             except KeyError:
+                new_num += 1
                 old_plist_blob = None
             if old_plist_blob is None:
                 plist_blob = self.encode_posting_list(plist)
@@ -400,6 +429,7 @@ class SimpleObjectIndex(object):
                 plist_blob = self.update_posting_list(old_plist_blob, plist)
             w_batch.Put(term_key, plist_blob)
         plist_store.Write(w_batch, sync=True)
+        logging.info("updated %d plists, %d new" % (upd_num, new_num))
 
     def load_posting_list(self, term_id, plist_store):
         term_key = numencode.encode_uint(term_id)
@@ -417,12 +447,13 @@ class SimpleObjectIndex(object):
             w_batch.Put(obj_key, obj_blob)
         object_store.Write(w_batch, sync=True)
         logging.info("wrote %d objects" % len(id_object_map))
+        self.update_objnum(self.objnum)
 
     def load_object(self, obj_id, obj_store):
         obj_key = numencode.encode_uint(obj_id)
         obj_blob = obj_store.Get(obj_key)
-        obj_str = self.compressHC(obj_blob)
-        obj = self.obj_to_str(obj_str)
+        obj_str = self.decompress(obj_blob)
+        obj = self.str_to_obj(obj_str)
         return obj
 
     def write_terms(self, id_term_map, batch_size=64):
@@ -455,43 +486,55 @@ class SimpleObjectIndex(object):
         logging.info("INDEX: LOADED %d TERMS" % len(id_term_map))
         return id_term_map
 
-    def index_term(self, term, object_id):
+    def index_term(self, term, object_id, post_lists):
         term_id = self.term_id_map.get(term, -1)
         if term_id == -1:
             term_id = len(self.term_id_map)
             self.term_id_map[term] = term_id
             self.id_term_map.append(term)
-        plist = self.post_lists.get(term_id, -1)
+        plist = post_lists.get(term_id, -1)
         if plist == -1:
-            self.post_lists[term_id] = {object_id}
+            post_lists[term_id] = [object_id]
         else:
-            plist.add(object_id)
+            plist.append(object_id)
 
-    def create_index(self, objects, cache_size=1000 ** 2):
-        cur_doc_id = 0
-        self.id_term_map = []
-        self.term_id_map = dict()
-        self.post_lists = dict()
-        self.id_obj_map = []
+    def update_index(self, objects, cache_size=(15000, 1000000)):
+        post_lists = dict()
+        id_obj_map = []
         cached = 0
         logging.info("starting creating index")
         for obj in objects:
             terms = self.obj_to_terms(obj)
             for term in terms:
-                self.index_term(term, cur_doc_id)
+                self.index_term(term, self.objnum, post_lists)
                 cached += 1
-                if cached > cache_size:
-                    self.update_posting_lists(self.post_lists)
-                    self.post_lists = dict()
+                if cached > cache_size[1]:
+                    self.update_posting_lists(post_lists)
+                    post_lists = dict()
                     cached = 0
-            self.id_obj_map.append((cur_doc_id, obj))
-            if len(self.id_obj_map) > cache_size:
-                self.write_objects(self.id_obj_map)
-                self.id_obj_map = []
-            cur_doc_id += 1
+            id_obj_map.append((self.objnum, obj))
+            if len(id_obj_map) > cache_size[0]:
+                self.write_objects(id_obj_map)
+                id_obj_map = []
+            self.objnum += 1
+        self.write_objects(id_obj_map)
+        self.update_posting_lists(post_lists)
         self.write_terms(self.id_term_map)
-        self.write_objects(self.id_obj_map)
-        self.update_posting_lists(self.post_lists)
-        self.id_obj_map = None
-        self.post_lists = None
         logging.info("index done")
+    
+    def find(self, query_term=None):
+        plist_store = leveldb.LevelDB("%s/plist.index" % self.data_dir)
+        object_store = leveldb.LevelDB("%s/object.db" % self.data_dir)
+        if query_term is None:
+            return []
+        term_id = self.term_id_map.get(query_term, -1)
+        logging.info("TERM ID: %d" % term_id)
+        if term_id == -1:
+            logging.info("TERM NOT FOUND IN DICTIONARY")
+            return []
+        plist = self.load_posting_list(term_id, plist_store)
+        results = []
+        for obj_id in plist:
+            obj = self.load_object(obj_id, object_store)
+            results.append(obj)
+        return results

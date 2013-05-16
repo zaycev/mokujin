@@ -93,7 +93,7 @@ def encode_1d_plist(plist):
     tid_arr = array.array("l", [0] * len(plist))
     i = 0
     while i < len(plist):
-        tid_arr[i] = plist[i][0]
+        tid_arr[i] = plist[i]
         i += 1
     delta_encode(tid_arr)
     return tid_arr.tostring()
