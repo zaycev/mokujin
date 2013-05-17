@@ -19,6 +19,17 @@ class POS(object):
     PR = 0x06
     ANY = 0x07
 
+ID_POS_NAME = {
+    POS.NONE: "NONE",
+    POS.VB: "VB",
+    POS.NN: "NN",
+    POS.ADJ: "ADJ",
+    POS.RB: "RB",
+    POS.PREP: "PREP",
+    POS.PR: "PR",
+    POS.ANY: "ANY",
+}
+
 
 class Args(object):
 
