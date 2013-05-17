@@ -42,8 +42,8 @@ REL_POS_MAP = {
     REL_ID_MAP[mtr.DepNoun_NounEqualNoun.rel_name]: (POS.NN, POS.NN, ),
     REL_ID_MAP[mtr.DepNoun_NounPrepNoun.rel_name]: (POS.NN, POS.PREP, POS.NN, ),
     REL_ID_MAP[mtr.DepAny_Compl.rel_name]: (POS.ANY, POS.ANY, ),
+    REL_ID_MAP[mtr.DepNoun_NounEqualNoun.rel_name]: (POS.NN, POS.NN),
 }
-
 
 if len(REL_POS_MAP) != len(REL_ID_MAP):
     logging.error("NOT ALL RELATIONS HAS POS MAP")
