@@ -14,7 +14,7 @@ import argparse
 from mokujin.index import TripleIndex
 from mokujin.index import TripleSearchEngine
 from mokujin.query import DomainSearchQuery
-from mokujin.triplexplore import TripleStoreExplorer
+from mokujin.sourcesearch import TripleStoreExplorer
 from mokujin.misc import transliterate_ru
 
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
         for term in domain.target_terms:
             fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
-            fl.write("potential_source, joined_freq, total_freq, norm_freq, joined_tfreq, total_tfreq, norm_tfreq\n")
+            fl.write("potential_source, joined_freq, total_freq, joined_triple_freq, total_triple_freq, norm_freq\n")
 
             novels = explorer.find_potential_sources(term, threshold=args.threshold2)
             if novels is None:

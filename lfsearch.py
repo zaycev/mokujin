@@ -13,10 +13,10 @@ import logging
 import argparse
 import cPickle as pickle
 
-from mokujin.logicalform import POS
+
 from mokujin.index import SimpleObjectIndex
-from mokujin.logicalform import MetaphorAdpLF_Reader
 from createlfindex import sent_to_terms
+
 
 if __name__ == "__main__":
 
