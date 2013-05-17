@@ -40,18 +40,18 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--data", default="data/index", help="Mokujin data dir directory", type=str)
+    parser.add_argument("-d", "--data", default="data/index", help="Triple store index directory", type=str)
     parser.add_argument("-o", "--outputdir", default="output",
-                        help="Directory where fake novel source words willbe placed",  type=str)
+                        help="Directory where potential source words will be placed",  type=str)
     parser.add_argument("-q", "--queryfile", default="query.json", help="Search query file", type=str)
     parser.add_argument("-s", "--stopterms", default="light_words_ru.csv", help="Path to the file with stop words",
                         type=str)
-    parser.add_argument("-t1", "--threshold1", default=500, help="Max frequecy treshold for light words", type=float)
-    parser.add_argument("-t2", "--threshold2", default=5, help="Min frequecy treshold for seed triples", type=float)
+    parser.add_argument("-t1", "--threshold1", default=500, help="Max frequency treshold for light words", type=float)
+    parser.add_argument("-t2", "--threshold2", default=5, help="Min frequency treshold for seed triples", type=float)
     args = parser.parse_args()
 
-    logging.info("DATA DIR: %s" % args.data)
-    logging.info("OUT DIR: %s" % args.outputdir)
+    logging.info("INDEX DIR: %s" % args.data)
+    logging.info("OUTPUT DIR: %s" % args.outputdir)
     logging.info("QUERY FILE: %s" % args.queryfile)
     logging.info("STOP TERMS: %s" % args.stopterms)
     logging.info("T1: %f" % args.threshold1)
@@ -73,10 +73,10 @@ if __name__ == "__main__":
             novels = explorer.find_potential_sources(term, threshold=args.threshold2)
             if novels is None:
                 print
-                print "\tFOUND FAKE SOURCES FOR %s: %d" % (term, 0)
+                print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, 0)
                 continue
             else:
-                print "\tFOUND FAKE SOURCES FOR %s: %d" % (term, len(novels))
+                print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, len(novels))
             for novel in novels:
                 fl.write("%s\n" % explorer.format_source_output_line(novel))
             print
