@@ -27,8 +27,8 @@ class PotentialSource(object):
         self.joined_triple_freq = -1
         self.norm_freq = -1
 
-    def calculate_freqs(self, store_explorer, th):
-        self.total_freq, self.total_triple_freq = store_explorer.calc_term_freq(self.source_id, th)
+    def calculate_freqs(self, store_explorer, threshold):
+        self.total_freq, self.total_triple_freq = store_explorer.calc_term_freq(self.source_id, threshold)
         self.joined_freq = len(self.triples)
         self.joined_triple_freq = 0
         norm_freqs = []
