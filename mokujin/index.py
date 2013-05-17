@@ -498,7 +498,7 @@ class SimpleObjectIndex(object):
         else:
             plist.append(object_id)
 
-    def update_index(self, objects, cache_size=(15000, 1000000)):
+    def update_index(self, objects, cache_size=(200000, 80000000)):
         post_lists = dict()
         id_obj_map = []
         cached = 0
