@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--data", default="data/index", help="Triple store index directory", type=str)
     parser.add_argument("-i", "--input", default=None, help="Pickle file with imported sources",  type=str)
+    parser.add_argument("-t", "--threshold", default=100, help="Threshold to select first k best sources",  type=int)
     args = parser.parse_args()
 
     if args.input is None:
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     engine = TripleSearchEngine(indexer)
 
     sources = load(input_fl)
-    extract_source_matrix(sources, engine, terms_fl, patterns_fl, matrix_fl)
+    extract_source_matrix(sources, engine, terms_fl, patterns_fl, matrix_fl, threshold=args.threshold)
 
     input_fl.close()
     matrix_fl.close()

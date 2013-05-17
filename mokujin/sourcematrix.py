@@ -51,13 +51,17 @@ class Pattern(object):
 
 
 
-def extract_source_matrix(potential_sources, engine, o_term_fl, o_pattern_fl, o_matrix_fl):
+def extract_source_matrix(potential_sources, engine, o_term_fl, o_pattern_fl, o_matrix_fl, threshold=100):
     sparse_matrix = dict()
     pattern_key_id_map = dict()
     pattern_id_key_map = dict()
     term_id_cid_map = dict()  # term_id -> column map
     term_cid_id_map = dict()  # column -> term_id map
+    t = 1
     for ps in potential_sources:
+        if t > threshold > 0:
+            break
+        t += 1
         column = dict()  # [(pattern, measure)]
         for triple, norm_freq in ps.triples:
             pattern = Pattern(triple, ps.source_id)
