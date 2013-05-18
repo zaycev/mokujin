@@ -49,8 +49,6 @@ class Pattern(object):
         return pstr.getvalue()
 
 
-
-
 def extract_source_matrix(potential_sources, engine, o_term_fl, o_pattern_fl, o_matrix_fl, threshold=100):
     sparse_matrix = dict()
     pattern_key_id_map = dict()
