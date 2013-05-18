@@ -68,7 +68,10 @@ if __name__ == "__main__":
         sources = decompress(sources)
     sources = loads(sources)
 
-    extract_source_matrix(sources, engine, terms_fl, patterns_fl, matrix_fl, threshold=args.threshold)
+    if args.threshold > 0:
+        sources = sources[:min(len(sources), args.threshold)]
+
+    extract_source_matrix(sources, engine, terms_fl, patterns_fl, matrix_fl)
 
     input_fl.close()
     matrix_fl.close()
