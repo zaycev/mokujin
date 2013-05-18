@@ -18,6 +18,7 @@
 # For license information, see LICENSE
 
 
+import csv
 import logging
 import argparse
 import cPickle as pickle
@@ -27,7 +28,23 @@ from mokujin.index import TripleSearchEngine
 from mokujin.query import DomainSearchQuery
 from mokujin.sourcesearch import TripleStoreExplorer
 from mokujin.misc import transliterate_ru
-from findsources import load_stop_terms
+
+
+def load_stop_terms(file_path, threshold=500.0):
+    stop_terms_set = set()
+    try:
+        with open(file_path, "rb") as csvfile:
+            stop_terms = csv.reader(csvfile, delimiter=",")
+            for rank, freq, lemma, pos in stop_terms:
+                freq = float(freq)
+                if freq >= threshold:
+                    stop_terms_set.add(lemma)
+                else:
+                    break
+    except IOError:
+        pass
+    logging.info("LOADED %d STOP WORDS" % len(stop_terms_set))
+    return stop_terms_set
 
 
 if __name__ == "__main__":
