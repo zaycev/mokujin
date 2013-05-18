@@ -70,7 +70,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--stopterms", default="light_words_ru.csv", help="Path to the file with stop words",
                         type=str)
     parser.add_argument("-t1", "--threshold1", default=500, help="Max frequency treshold for light words", type=float)
-    parser.add_argument("-t2", "--threshold2", default=5, help="Min frequency treshold for seed triples", type=float)
+    parser.add_argument("-t2", "--threshold2", default=5, help="Min frequency treshold for target triples", type=float)
     parser.add_argument("-t3", "--threshold3", default=100, help="Number of first sources to output. Specify 0 to "
                                                                  "output all found potential sources", type=int)
     parser.add_argument("-c", "--compress", default=1, choices=(0, 1), help="Compress output plk", type=int)
@@ -118,7 +118,7 @@ if __name__ == "__main__":
             logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
             for term in domain.target_terms:
                 fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
-                fl.write("potential_source, joined_freq, total_freq, joined_triple_freq, total_triple_freq, norm_freq\n")
+                fl.write("siurce, norm_freq, triples\n")
                 sources = explorer.find_potential_sources(term, threshold=args.threshold2)
                 if sources is None:
                     print
@@ -126,9 +126,9 @@ if __name__ == "__main__":
                     continue
                 else:
                     print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, len(sources))
+                if args.threshold3 > 0:
+                    sources = sources[0:min(args.threshold3, len(sources))]
                 for source in sources:
-                    if args.threshold3 > 0:
-                        sources = sources[0:min(args.threshold3, len(sources))]
                     fl.write("%s\n" % explorer.format_source_output_line(source))
                 print
                 fl.close()
