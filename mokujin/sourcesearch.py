@@ -21,7 +21,6 @@ class PotentialSource(object):
         self.target_id = target_id
         self.source_id = source_id
         self.triples = triples
-        self.total_freq = -1
         self.total_triple_freq = -1
         self.joined_freq = -1
         self.joined_triple_freq = -1
@@ -135,7 +134,8 @@ class TripleStoreExplorer(object):
         for term in stop_terms:
             term_id = self.engine.term_id_map.get(term, -1)
             if term_id == -1:
-                print "\tNOT FOUND: %s" % term
+                pass
+                # print "\tNOT FOUND: %s" % term
         stop_terms_ids.add(-1)
         return stop_terms_ids
 
@@ -163,15 +163,15 @@ class TripleStoreExplorer(object):
         print "\tAFTER IGNORING LIGHT TRIPLES: %d" % len(seed_triples)
         # retrieve siblings - triples containing the same arguments as seed triples
         # sibling(target, source) is triple (a_1, .., source, .., a_n) such as: exist triple (a_1, .., target, .., a_n)
-        siblings, siblings_num = self.find_siblings(target_term_id, seed_triples)
-        print "\tFOUND SIBLINGS FOR %s: %d" % (term, siblings_num)
+        source_triples, source_triple_num = self.find_siblings(target_term_id, seed_triples)
+        print "\tFOUND SOURCE TRIPLES FOR %s: %d" % (term, source_triple_num)
         potential_sources = []
         ignored = 0
 
         # calculating normalized frequencies
         # joined_freq   - number of siblings for given source and target terms
         # joined_tfreq  - total frequency of siblings for given source and target terms
-        for source_term_id, triples in siblings.iteritems():
+        for source_term_id, triples in source_triples.iteritems():
             if source_term_id in self.stop_terms:
                 ignored += 1
                 continue
