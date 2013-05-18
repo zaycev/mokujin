@@ -29,6 +29,17 @@ from mokujin.query import DomainSearchQuery
 from mokujin.sourcesearch import TripleStoreExplorer
 from mokujin.misc import transliterate_ru
 
+try:
+    import lz4 as comp
+    comp_format = "lz4"
+    compress = comp.compressHC
+    decompress = comp.decompress
+except ImportError:
+    import zlib as comp
+    comp_format = "zip"
+    compress = lambda string: comp.compress(string, 9)
+    decompress = comp.decompress
+
 
 def load_stop_terms(file_path, threshold=500.0):
     stop_terms_set = set()
@@ -60,8 +71,9 @@ if __name__ == "__main__":
                         type=str)
     parser.add_argument("-t1", "--threshold1", default=500, help="Max frequency treshold for light words", type=float)
     parser.add_argument("-t2", "--threshold2", default=5, help="Min frequency treshold for seed triples", type=float)
-    parser.add_argument("-t3", "--threshold3", default=100, help="Number of first sources to output. Specify -1 to "
+    parser.add_argument("-t3", "--threshold3", default=100, help="Number of first sources to output. Specify 0 to "
                                                                  "output all found potential sources", type=int)
+    parser.add_argument("-c", "--compress", default=1, choices=(0, 1), help="Compress output plk", type=int)
 
     parser.add_argument("-f", "--format", default="pkl", choices=("pkl", "txt", ),
                         help="Number of first sources to output", type=str)
@@ -72,8 +84,11 @@ if __name__ == "__main__":
     logging.info("OUTPUT DIR: %s" % args.outputdir)
     logging.info("QUERY FILE: %s" % args.queryfile)
     logging.info("STOP TERMS: %s" % args.stopterms)
+    logging.info("FORMAT: %s" % args.format)
+    logging.info("COMPRESSION: %r" % args.compress)
     logging.info("T1: %f" % args.threshold1)
     logging.info("T2: %f" % args.threshold2)
+    logging.info("T3: %f" % args.threshold3)
 
     stop_terms = load_stop_terms(args.stopterms, threshold=args.threshold1)
     query = DomainSearchQuery.fromstring(open(args.queryfile).read())
@@ -88,12 +103,13 @@ if __name__ == "__main__":
             logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
             for term in domain.target_terms:
                 sources = explorer.find_potential_sources(term, threshold=args.threshold2)
-                fl = open("%s/%s_%s.pkl" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
-
                 if args.threshold3 > 0:
                     sources = sources[0:min(args.threshold3, len(sources))]
-
-                pickle.dump(sources, fl)
+                sources_str = pickle.dumps(sources)
+                if args.compress == 1:
+                    sources_str = compress(pickle.dumps(sources))
+                fl = open("%s/%s_%s.pkl" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
+                fl.write(sources_str)
                 fl.close()
 
     elif args.format == "txt":
