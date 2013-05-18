@@ -89,10 +89,11 @@ def extract_source_matrix(potential_sources, engine, o_term_fl, o_pattern_fl, o_
         pattern = pattern_id_key_map[i]
         o_pattern_fl.write("%d,%s,%s\n" % (i, pattern.pprint(engine), pattern.key))
 
+    logging.info("OUTPUT MATRIX (%dx%d) TO %r" % (len(term_cid_id_map), len(pattern_id_key_map), o_pattern_fl))
     for i in xrange(len(term_cid_id_map)):
         for j in xrange(len(pattern_id_key_map)):
             if j in sparse_matrix[i]:
-                o_matrix_fl.write("%.8f " % sparse_matrix[i][j])
+                o_matrix_fl.write("%.16f " % sparse_matrix[i][j])
             else:
                 o_matrix_fl.write("0 ")
         o_matrix_fl.write("\n")

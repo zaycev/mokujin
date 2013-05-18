@@ -21,7 +21,8 @@
 import logging
 import argparse
 
-from cPickle import load
+from cPickle import loads
+from findsources import decompress
 from mokujin.index import TripleIndex
 from mokujin.index import TripleSearchEngine
 from mokujin.sourcematrix import extract_source_matrix
@@ -34,6 +35,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--data", default="data/index", help="Triple store index directory", type=str)
     parser.add_argument("-i", "--input", default=None, help="Pickle file with imported sources",  type=str)
+    parser.add_argument("-c", "--decompress", default=1, choices=(0, 1), help="Decompress input plk", type=int)
     parser.add_argument("-t", "--threshold", default=100, help="Threshold to select first k best sources",  type=int)
     args = parser.parse_args()
 
@@ -42,6 +44,7 @@ if __name__ == "__main__":
 
     logging.info("INDEX DIR: %s" % args.data)
     logging.info("INPUT: %s" % args.input)
+    logging.info("COMPRESSION: %r" % args.decompress)
 
     input_fl = open(args.input, "rb")
     matrix_fl = "%s.matrix.txt" % args.input
@@ -60,7 +63,11 @@ if __name__ == "__main__":
     indexer = TripleIndex(args.data)
     engine = TripleSearchEngine(indexer)
 
-    sources = load(input_fl)
+    sources = input_fl.read()
+    if args.decompress:
+        sources = decompress(sources)
+    sources = loads(sources)
+
     extract_source_matrix(sources, engine, terms_fl, patterns_fl, matrix_fl, threshold=args.threshold)
 
     input_fl.close()
