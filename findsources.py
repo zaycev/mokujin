@@ -75,7 +75,7 @@ if __name__ == "__main__":
                                                                  "output all found potential sources", type=int)
     parser.add_argument("-c", "--compress", default=1, choices=(0, 1), help="Compress output plk", type=int)
 
-    parser.add_argument("-f", "--format", default="pkl", choices=("pkl", "txt", ),
+    parser.add_argument("-f", "--format", default="all", choices=("pkl", "txt", "all"),
                         help="Number of first sources to output", type=str)
 
     args = parser.parse_args()
@@ -97,14 +97,22 @@ if __name__ == "__main__":
     engine = TripleSearchEngine(indexer)
     explorer = TripleStoreExplorer(engine, stop_terms=stop_terms)
 
-    if args.format == "pkl":
+    for domain in query:
+        logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
+        for term in domain.target_terms:
+            sources = explorer.find_potential_sources(term, threshold=args.threshold2)
 
-        for domain in query:
-            logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
-            for term in domain.target_terms:
-                sources = explorer.find_potential_sources(term, threshold=args.threshold2)
-                if args.threshold3 > 0:
-                    sources = sources[0:min(args.threshold3, len(sources))]
+            if sources is None:
+                print
+                print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, 0)
+                continue
+            else:
+                print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, len(sources))
+
+            if args.threshold3 > 0:
+                sources = sources[0:min(args.threshold3, len(sources))]
+
+            if args.format == "pkl" or args.format == "all":
                 sources_str = pickle.dumps(sources)
                 if args.compress == 1:
                     sources_str = compress(pickle.dumps(sources))
@@ -112,22 +120,9 @@ if __name__ == "__main__":
                 fl.write(sources_str)
                 fl.close()
 
-    elif args.format == "txt":
-
-        for domain in query:
-            logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
-            for term in domain.target_terms:
+            if args.format == "txt" or args.format == "all":
                 fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
-                fl.write("siurce, norm_freq, triples\n")
-                sources = explorer.find_potential_sources(term, threshold=args.threshold2)
-                if sources is None:
-                    print
-                    print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, 0)
-                    continue
-                else:
-                    print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, len(sources))
-                if args.threshold3 > 0:
-                    sources = sources[0:min(args.threshold3, len(sources))]
+                fl.write("source, norm_freq, triples\n")
                 for source in sources:
                     fl.write("%s\n" % explorer.format_source_output_line(source))
                 print
