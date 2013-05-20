@@ -173,9 +173,9 @@ class TripleStoreExplorer(object):
         return potential_sources
 
     def format_source_output_line(self, potential_source):
-        triples = [triple for triple, norm_freq in potential_source.triples]
+        triples = potential_source.triples
         triples_str = ""
-        for triple in triples:
+        for triple, norm_freq in triples:
             if triple[1] >= 0:
                 triples_str += "{%s" % self.engine.id_term_map[triple[1]]
             else:
@@ -185,7 +185,7 @@ class TripleStoreExplorer(object):
                     triples_str += "; " + self.engine.id_term_map[term_id]
                 else:
                     triples_str += "NONE"
-            triples_str += ", %d}  " % triple[-1]
+            triples_str += ", %.8f}  " % norm_freq
         return "%s, %.6f // %s" % (
             self.engine.id_term_map[potential_source.source_id],
             potential_source.norm_freq,
