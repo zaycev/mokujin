@@ -54,7 +54,7 @@ if __name__ == "__main__":
                     continue
                 term_pairs.append((source, target))
                 handled.add(t_s_pair)
-    pairs_n = len(term_pair)
+    pairs_n = len(term_pairs)
     isentences = imap(lambda p: (index.find(query_terms=p), p), term_pairs)
 
     i = 0
