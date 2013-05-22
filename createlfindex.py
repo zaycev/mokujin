@@ -27,8 +27,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", default=None, type=str)
-    parser.add_argument("-o", "--outdir", default="text-index", type=str)
+    parser.add_argument("-i", "--input", default="resources/*.lf.txt", type=str)
+    parser.add_argument("-o", "--outdir", default="lfindex", type=str)
     args = parser.parse_args()
 
     i_files = glob.glob(args.input)

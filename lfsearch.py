@@ -23,7 +23,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--inputdir", default="lfindex", type=str)
+    parser.add_argument("-i", "--index", default="lfindex", help="LF sentences index directory", type=str)
     parser.add_argument("-o", "--output", default=None, type=str)
     parser.add_argument("-q", "--query", default=None, type=str)
     args = parser.parse_args()
@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     index = SimpleObjectIndex(i_dir, obj_to_terms, obj_to_str, str_to_obj)
     index.load_all()
-    results = index.find(query_term=query_term)
+    results = index.find(query_terms=(query_term,))
 
     o_file.write("FOUND (%d):\n" % len(results))
     for sent in results:

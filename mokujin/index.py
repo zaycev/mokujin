@@ -522,19 +522,22 @@ class SimpleObjectIndex(object):
         self.write_terms(self.id_term_map)
         logging.info("index done")
     
-    def find(self, query_term=None):
+    def find(self, query_terms=None):
         plist_store = leveldb.LevelDB("%s/plist.index" % self.data_dir)
         object_store = leveldb.LevelDB("%s/object.db" % self.data_dir)
-        if query_term is None:
+        if query_terms is None:
             return []
-        term_id = self.term_id_map.get(query_term, -1)
-        logging.info("TERM ID: %d" % term_id)
-        if term_id == -1:
-            logging.info("TERM NOT FOUND IN DICTIONARY")
-            return []
-        plist = self.load_posting_list(term_id, plist_store)
+        result_ids = set()
+        for query_term in query_terms:
+            term_id = self.term_id_map.get(query_term, -1)
+            logging.info("TERM ID: %d" % term_id)
+            if term_id == -1:
+                logging.info("TERM NOT FOUND IN DICTIONARY")
+                return []
+            plist = self.load_posting_list(term_id, plist_store)
+            result_ids.update(plist)
         results = []
-        for obj_id in plist:
+        for obj_id in result_ids:
             obj = self.load_object(obj_id, object_store)
             results.append(obj)
         return results
