@@ -223,6 +223,7 @@ class ParallelSearcher(object):
         for i in xrange(self.n_jobs * 2):
             self.i_queue.put(ParallelSearcher.STOP)
 
+
 class SentenceCrawler(object):
 
     def __init__(self, input_dir_path, o_file, query, max_sz=8192, n_jobs=(1, 1)):
@@ -241,18 +242,22 @@ class SentenceCrawler(object):
                 return
             else:
                 sent, matches = item
-                for label, source, target in matches:
-                    sid = sent.sid
-                    text = sent.raw_text
-                    o_str = "[id:%d, domain:%s, source:%s, target:%s] \n %s\n" % (
-                        sid,
-                        label,
-                        source,
-                        target,
-                        text.encode("utf-8")
-                    )
-                    o_file.write(o_str)
+                for match in matches:
+                    o_file.write(SentenceCrawler.format_output(sent, match))
 
+    @staticmethod
+    def format_output(sent, match):
+        label, source, target = match
+        sid = sent.sid
+        text = sent.raw_text
+        o_str = "[id:%d, domain:%s, source:%s, target:%s] \n %s\n" % (
+            sid,
+            label,
+            source,
+            target,
+            text.encode("utf-8")
+        )
+        return o_str
 
     def run(self, o_file=sys.stdout):
         self.reader.start()

@@ -46,7 +46,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--data", default="data/index", help="Triple store index directory", type=str)
+    parser.add_argument("-i", "--index", default="data/index", help="Triple store index directory", type=str)
     parser.add_argument("-o", "--outputdir", default="output",
                         help="Directory where potential source words will be placed",  type=str)
     parser.add_argument("-q", "--queryfile", default="resources/example.json", help="Search query file. See "
