@@ -24,25 +24,28 @@ class PotentialSource(object):
         self.triples_count = -1
         self.total_pattern_source_triple_freq = -1
         self.total_pattern_target_triple_freq = -1
-        self.norm_freq = -1
+        self.norm_source_freq = -1
+        self.norm_target_freq = -1
 
     def calculate_freqs(self):
         self.triples_count = len(self.triples)
         self.total_pattern_source_triple_freq = 0
-        norm_freqs = []
+        norm_source_freqs = []
+        norm_target_freqs = []
         triples = []
-
         for target_triple, source_triple, target_triple_pattern_freq in self.triples:
             source_triple_freq = source_triple[-1]
             target_triple_freq = target_triple[-1]
             self.total_pattern_source_triple_freq += source_triple_freq
             self.total_pattern_target_triple_freq += target_triple_freq
-            source_patterns_freq = target_triple_pattern_freq + source_triple[-1]
-            norm_freq = float(source_triple_freq) / float(source_patterns_freq)
-            norm_freqs.append(norm_freq)
-            triples.append((source_triple, norm_freq))
-
-        self.norm_freq = sum(norm_freqs)
+            patterns_freq = target_triple_pattern_freq + source_triple[-1]
+            norm_source_freq = float(source_triple_freq) / float(patterns_freq)
+            norm_target_freq = float(target_triple_freq) / float(patterns_freq)
+            norm_source_freqs.append(norm_source_freq)
+            norm_target_freqs.append(norm_target_freq)
+            triples.append((source_triple, norm_source_freq))
+        self.norm_source_freq = sum(norm_source_freqs)
+        self.norm_target_freq = sum(norm_target_freqs)
         self.triples = triples
         self.triples.sort(key=lambda triple: -triple[1])
 
@@ -180,7 +183,6 @@ class TripleStoreExplorer(object):
         potential_sources = []
         stops_ignored = 0
         cnect_ignored = 0
-
         for source_term_id, triples in source_triples.iteritems():
             if source_term_id in self.stop_terms:
                 stops_ignored += 1
@@ -191,13 +193,18 @@ class TripleStoreExplorer(object):
             if source_term_id in self.concept_net and target_term_id in self.concept_net[source_term_id]:
                 cnect_ignored += 1
                 continue
-
             new_source = PotentialSource(source_term_id, triples)
             new_source.calculate_freqs()
             potential_sources.append(new_source)
         print "\tSTOPS IGNORED: %d" % stops_ignored
         print "\tCONCEPT NET IGNORED: %d" % cnect_ignored
-        potential_sources.sort(key=lambda source: -source.norm_freq)
+        # Other sorting options:
+        #   * triples_count
+        #   * total_pattern_source_triple_freq
+        #   * total_pattern_target_triple_freq
+        #   * norm_source_freq
+        #   * norm_target_freq
+        potential_sources.sort(key=lambda source: -source.norm_source_freq)
         return potential_sources
 
     def format_source_output_line(self, potential_source):
@@ -214,9 +221,10 @@ class TripleStoreExplorer(object):
                 else:
                     triples_str += "NONE"
             triples_str += ";%.6f} " % norm_freq
-        return "%s\t%.6f\t%d\t%d\t%d\t%s" % (
+        return "%s\t%.8f\t%.8f\t%d\t%d\t%d\t%s" % (
             self.engine.id_term_map[potential_source.source_id],
-            potential_source.norm_freq,
+            potential_source.norm_source_freq,
+            potential_source.norm_target_freq,
             len(potential_source.triples),
             potential_source.total_pattern_source_triple_freq,
             potential_source.total_pattern_target_triple_freq,
