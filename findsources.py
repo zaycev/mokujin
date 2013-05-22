@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     query = DomainSearchQuery.fromstring(open(args.queryfile).read())
     logging.info("LOADING INDEX")
-    indexer = TripleIndex(args.data)
+    indexer = TripleIndex(args.index)
     engine = TripleSearchEngine(indexer)
 
     explorer = TripleStoreExplorer(engine, stop_terms=stop_list, concept_net=concept_net)
