@@ -22,7 +22,6 @@ import logging
 import argparse
 import cPickle as pickle
 
-
 from mokujin.index import TripleIndex
 from mokujin.resource import StopList
 from mokujin.resource import ConceptNetList
@@ -122,7 +121,8 @@ if __name__ == "__main__":
             if args.format == "txt" or args.format == "all":
                 fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
                 fl.write("source"
-                         "\tsum_of_norm_freq"
+                         "\tsum_of_source_norm_freq"
+                         "\tsum_of_target_norm_freq"
                          "\tnumber_of_triples"
                          "\ttotal_pattern_source_triple_freq"
                          "\ttotal_pattern_target_triple_freq"
