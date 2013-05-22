@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--index", default="lfindex", help="LF sentences index directory", type=str)
-    parser.add_argument("-o", "--ofile", default="found-metaphors.txt")
+    parser.add_argument("-o", "--ofile", default=None)
     parser.add_argument("-q", "--queryfile", default="resources/example.json", help="Search query file", type=str)
     args = parser.parse_args()
     o_file = open(args.ofile, "w") if args.ofile is not None else sys.stdout
@@ -59,7 +59,8 @@ if __name__ == "__main__":
     searcher = SourceTargetSearcher(query)
     for sent in i_sentences:
         matches = searcher.find_dep_matches(sent)
-        logging.info("FOUND %d MATCHES" % len(matches))
+        if len(matches) > 0:
+            logging.info("FOUND %d MATCHES" % len(matches))
         for match in matches:
             o_file.write(SentenceCrawler.format_output(sent, match))
     o_file.close()
