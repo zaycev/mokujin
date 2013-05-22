@@ -18,14 +18,16 @@
 # For license information, see LICENSE
 
 
-import csv
 import logging
 import argparse
 import cPickle as pickle
 
+
 from mokujin.index import TripleIndex
-from mokujin.index import TripleSearchEngine
+from mokujin.resource import StopList
+from mokujin.resource import ConceptNetList
 from mokujin.query import DomainSearchQuery
+from mokujin.index import TripleSearchEngine
 from mokujin.sourcesearch import TripleStoreExplorer
 from mokujin.misc import transliterate_ru
 
@@ -40,24 +42,6 @@ except ImportError:
     compress = lambda string: comp.compress(string, 9)
     decompress = comp.decompress
 
-
-def load_stop_terms(file_path, threshold=500.0):
-    stop_terms_set = set()
-    try:
-        with open(file_path, "rb") as csvfile:
-            stop_terms = csv.reader(csvfile, delimiter=",")
-            for rank, freq, lemma, pos in stop_terms:
-                freq = float(freq)
-                if freq >= threshold:
-                    stop_terms_set.add(lemma)
-                else:
-                    break
-    except IOError:
-        pass
-    logging.info("LOADED %d STOP WORDS" % len(stop_terms_set))
-    return stop_terms_set
-
-
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
@@ -66,41 +50,56 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--data", default="data/index", help="Triple store index directory", type=str)
     parser.add_argument("-o", "--outputdir", default="output",
                         help="Directory where potential source words will be placed",  type=str)
-    parser.add_argument("-q", "--queryfile", default="query.json", help="Search query file", type=str)
-    parser.add_argument("-s", "--stopterms", default="light_words_ru.csv", help="Path to the file with stop words",
-                        type=str)
-    parser.add_argument("-t1", "--threshold1", default=500, help="Max frequency treshold for light words", type=float)
-    parser.add_argument("-t2", "--threshold2", default=5, help="Min frequency treshold for target triples", type=float)
-    parser.add_argument("-t3", "--threshold3", default=100, help="Number of first sources to output. Specify 0 to "
-                                                                 "output all found potential sources", type=int)
-    parser.add_argument("-c", "--compress", default=1, choices=(0, 1), help="Compress output plk", type=int)
-
+    parser.add_argument("-q", "--queryfile", default="resources/example.json", help="Search query file. See "
+                                                                                    "resources/example.json", type=str)
+    parser.add_argument("-s", "--stoplist", default="resources/word.freq.ru.csv", help="Stop list file", type=str)
+    parser.add_argument("-ts", "--t_stop", default=500, help="Stop words frequency threshold", type=float)
+    parser.add_argument("-tt", "--t_triple", default=5, help="Min frequency treshold for target triples", type=float)
+    parser.add_argument("-k", "--k_top", default=100, help="Number of first sources to output. Specify 0 to output all "
+                                                           "found potential sources", type=int)
+    parser.add_argument("-z", "--compress", default=1, choices=(0, 1), help="Compress output plk", type=int)
     parser.add_argument("-f", "--format", default="all", choices=("pkl", "txt", "all"),
-                        help="Number of first sources to output", type=str)
+                        help="Output format", type=str)
+    parser.add_argument("-c", "--conceptnet", default="resources/conceptnet.ru.csv",
+                        help="Path to the conceptnet file", type=str)
+    parser.add_argument("-r", "--cn_rel", default="cds", type=str,
+                        help="Types of concept net relation which should be filtered: \n"
+                             "'c' for ConceptuallyRelatedTo\n"
+                             "'d' for DerivedFrom\n"
+                             "'s' for Synonym")
 
     args = parser.parse_args()
 
     logging.info("INDEX DIR: %s" % args.data)
     logging.info("OUTPUT DIR: %s" % args.outputdir)
     logging.info("QUERY FILE: %s" % args.queryfile)
-    logging.info("STOP TERMS: %s" % args.stopterms)
-    logging.info("FORMAT: %s" % args.format)
-    logging.info("COMPRESSION: %r" % args.compress)
-    logging.info("T1: %f" % args.threshold1)
-    logging.info("T2: %f" % args.threshold2)
-    logging.info("T3: %f" % args.threshold3)
+    logging.info("STOP LIST: %s" % args.stoplist)
+    logging.info("STOP WORDS FREQ THRESHOLD: %f" % args.t_stop)
+    logging.info("TRIPLES FREQ THRESHOLD: %f" % args.t_triple)
+    logging.info("OUTPUT K FIRST SOURCES: k=%d" % args.k_top)
+    logging.info("USE PKL COMPRESSION: %r" % args.compress)
+    logging.info("OUTPUT FORMAT: %s" % args.format)
+    logging.info("CONCEPT NET FILE: %s" % args.conceptnet)
+    logging.info("CONCEPT NET RELATIONS: %s" % args.cn_rel)
 
-    stop_terms = load_stop_terms(args.stopterms, threshold=args.threshold1)
+    stop_list = None
+    concept_net = None
+    if args.stoplist:
+        stop_list = StopList.load(args.stoplist, threshold=args.t_stop)
+    if args.conceptnet and args.cn_rel:
+        concept_net = ConceptNetList.load(args.conceptnet, rels=args.cn_rel)
+
     query = DomainSearchQuery.fromstring(open(args.queryfile).read())
     logging.info("LOADING INDEX")
     indexer = TripleIndex(args.data)
     engine = TripleSearchEngine(indexer)
-    explorer = TripleStoreExplorer(engine, stop_terms=stop_terms)
+
+    explorer = TripleStoreExplorer(engine, stop_terms=stop_list, concept_net=concept_net)
 
     for domain in query:
         logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
         for term in domain.target_terms:
-            sources = explorer.find_potential_sources(term, threshold=args.threshold2)
+            sources = explorer.find_potential_sources(term, threshold=args.t_triple)
 
             if sources is None:
                 print
@@ -109,8 +108,8 @@ if __name__ == "__main__":
             else:
                 print "\tFOUND POTENTIAL SOURCES FOR %s: %d" % (term, len(sources))
 
-            if args.threshold3 > 0:
-                sources = sources[0:min(args.threshold3, len(sources))]
+            if args.k_top > 0:
+                sources = sources[0:min(args.k_top, len(sources))]
 
             if args.format == "pkl" or args.format == "all":
                 sources_str = pickle.dumps(sources)
@@ -122,7 +121,13 @@ if __name__ == "__main__":
 
             if args.format == "txt" or args.format == "all":
                 fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
-                fl.write("source, norm_freq, triples\n")
+                fl.write("source"
+                         "\tsum_of_norm_freq"
+                         "\tnumber_of_triples"
+                         "\ttotal_pattern_source_triple_freq"
+                         "\ttotal_pattern_target_triple_freq"
+                         "\ttriples"
+                         "\n")
                 for source in sources:
                     fl.write("%s\n" % explorer.format_source_output_line(source))
                 print
