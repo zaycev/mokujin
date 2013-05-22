@@ -55,15 +55,12 @@ if __name__ == "__main__":
                 term_pairs.append((source, target))
                 handled.add(t_s_pair)
     pairs_n = len(term_pairs)
-    isentences = imap(lambda p: (index.find(query_terms=p), p), term_pairs)
+    i_sentences = index.find(query_terms_cnf=term_pairs)
 
     i = 0
     searcher = SourceTargetSearcher(query)
-    for sent_set, pair in isentences:
-        i += 1
-        logging.info("%d/%d %s AND %s => %d candidates" % (pairs_n, i, pair[0], pair[1], len(sent_set)))
-        for sent in sent_set:
-            matches = searcher.find_dep_matches(sent)
-            for match in matches:
-                o_file.write(SentenceCrawler.format_output(sent, match))
+    for sent in i_sentences:
+        matches = searcher.find_dep_matches(sent)
+        for match in matches:
+            o_file.write(SentenceCrawler.format_output(sent, match))
     o_file.close()
