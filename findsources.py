@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    logging.info("INDEX DIR: %s" % args.data)
+    logging.info("INDEX DIR: %s" % args.index)
     logging.info("OUTPUT DIR: %s" % args.outputdir)
     logging.info("QUERY FILE: %s" % args.queryfile)
     logging.info("STOP LIST: %s" % args.stoplist)
