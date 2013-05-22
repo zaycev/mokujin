@@ -54,13 +54,12 @@ if __name__ == "__main__":
                     continue
                 term_pairs.append((source, target))
                 handled.add(t_s_pair)
-    pairs_n = len(term_pairs)
     i_sentences = index.find(query_terms_cnf=term_pairs)
 
-    i = 0
     searcher = SourceTargetSearcher(query)
     for sent in i_sentences:
         matches = searcher.find_dep_matches(sent)
+        logging.info("FOUND %d MATCHES" % len(matches))
         for match in matches:
             o_file.write(SentenceCrawler.format_output(sent, match))
     o_file.close()
