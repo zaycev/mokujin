@@ -536,7 +536,7 @@ class SimpleObjectIndex(object):
                 return []
             plist = self.load_posting_list(term_id, plist_store)
             result_ids.update(plist)
-        logging.info("RETRIEVING %d OBJECTS FROM DISK")
+        logging.info("RETRIEVING %d OBJECTS FROM DISK" % len(result_ids))
         results = []
         for obj_id in result_ids:
             obj = self.load_object(obj_id, object_store)
