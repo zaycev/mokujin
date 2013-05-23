@@ -16,6 +16,6 @@ urlpatterns = patterns(
     "",
     url("^$", lambda _: redirect("/triples/")),
     url(r"^triples/$", "mokujin.web.search.views.triples", name="triples"),
-    url(r"^novels/$", "mokujin.web.search.views.novels", name="novels"),
+    url(r"^potential_sources/$", "mokujin.web.search.views.potential_sources", name="potential_sources"),
 )
 
