@@ -12,7 +12,7 @@ import logging
 import argparse
 import cPickle as pickle
 
-from itertools import imap
+
 from createlfindex import sent_to_terms
 from mokujin.index import SimpleObjectIndex
 from mokujin.query import DomainSearchQuery
@@ -38,7 +38,6 @@ if __name__ == "__main__":
     obj_to_terms = sent_to_terms
     obj_to_str = pickle.dumps
     str_to_obj = pickle.loads
-
 
     query = DomainSearchQuery.fromstring(open(args.queryfile).read())
     index = SimpleObjectIndex(args.index, obj_to_terms, obj_to_str, str_to_obj)

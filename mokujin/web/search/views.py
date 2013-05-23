@@ -113,21 +113,21 @@ def novels(request):
         if term is not None and term.encode("utf-8") in engine.term_id_map:
             found_triples = engine.search(arg_query=((term, term_pos),))
             results = SearchResultWrapper(found_triples, max_results=20, show_all=show_all)
-            return render_to_response("novels.html", {
+            return render_to_response("potential_sources.html", {
                 "query": raw_query,
                 "result": results,
                 "all": show_all,
                 "url": request.build_absolute_uri,
             })
         else:
-            return render_to_response("novels.html", {
+            return render_to_response("potential_sources.html", {
                 "query": raw_query,
                 "message": "Term not found",
                 "all": show_all,
                 "url": request.build_absolute_uri,
             })
     else:
-        return render_to_response("novels.html", {
+        return render_to_response("potential_sources.html", {
             "query": raw_query,
             "all": show_all,
             "url": request.build_absolute_uri,
