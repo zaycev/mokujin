@@ -7,17 +7,6 @@
 # For more information, see README.md
 # For license information, see LICENSE
 
-
-#!/usr/bin/env python
-# coding: utf-8
-
-# Copyright (C) USC Information Sciences Institute
-# Author: Vladimir M. Zaytsev <zaytsev@usc.edu>
-# URL: <http://nlg.isi.edu/>
-# For more information, see README.md
-# For license information, see LICENSE
-
-
 import logging
 import argparse
 import cPickle as pickle
@@ -76,7 +65,7 @@ if __name__ == "__main__":
     logging.info("STOP WORDS FREQ THRESHOLD: %f" % args.t_stop)
     logging.info("TRIPLES FREQ THRESHOLD: %f" % args.t_triple)
     logging.info("OUTPUT K FIRST SOURCES: k=%d" % args.k_top)
-    logging.info("USE PKL COMPRESSION: %r" % args.compress)
+    logging.info("USE PKL COMPRESSION: %r (%s)" % (args.compress, comp_format))
     logging.info("OUTPUT FORMAT: %s" % args.format)
     logging.info("CONCEPT NET FILE: %s" % args.conceptnet)
     logging.info("CONCEPT NET RELATIONS: %s" % args.cn_rel)

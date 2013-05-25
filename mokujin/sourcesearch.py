@@ -50,33 +50,32 @@ class PotentialSource(object):
         self.triples.sort(key=lambda triple: -triple[1])
 
 
-class Query(object):
+class PatternSearchQuery(object):
 
-    def __init__(self, source_term_id, target_triple):
-        self.target_triple = target_triple
-        self.rel_constraint = target_triple[0]
-        self.arg_constrains = []
-        self.source_term_id = source_term_id
-        self.source_term_pos = -1
-        self.duplicate_filter = lambda triple: triple[self.source_term_pos] != self.source_term_id
-        self.len_constraint_flt = lambda triple: len(triple) == len(self.target_triple)
-        for i in xrange(1, len(target_triple) - 1):
-            if target_triple[i] != source_term_id and target_triple[i] >= 0:
-                self.arg_constrains.append((target_triple[i], i))
+    def __init__(self, key_term, seed_triple):
+        self.seed_triple = seed_triple
+        self.rel_type = seed_triple[0]
+        self.arg_list = []
+        self.key_term = key_term
+        for i in range(1, len(seed_triple) - 1):
+            if seed_triple[i] != key_term and seed_triple[i] >= 0:
+                self.arg_list.append((seed_triple[i], i))
             else:
-                self.source_term_pos = i
+                self.key_term_i = i
+        self.len_constraint_flt = lambda triple: len(triple) == len(self.seed_triple)
+        self.self_filter = lambda triple: triple[self.key_term_i] != self.key_term
 
     def exact_pattern_match(self, triple):
-        if len(self.target_triple) != len(triple):
+        if len(self.seed_triple) != len(triple):
             return False
-        for i in xrange(len(self.target_triple)):
-            if i != self.source_term_pos and self.target_triple[i] != triple[i]:
+        for i in xrange(len(self.seed_triple)):
+            if i != self.key_term_i and self.seed_triple[i] != triple[i]:
                 return False
         return True
 
     def find_triples(self, engine, strict=True):
-        triples = engine.search(rel_type=self.rel_constraint, arg_query=self.arg_constrains)
-        triples = filter(self.duplicate_filter, triples)
+        triples = engine.search(rel_type=self.rel_type, arg_query=self.arg_list)
+        triples = filter(self.self_filter, triples)
         if strict:
             triples = filter(self.len_constraint_flt, triples)
             triples = filter(self.exact_pattern_match, triples)
@@ -114,17 +113,17 @@ class TripleStoreExplorer(object):
                 return False
         return True
 
-    def find_source_triples(self, term_id, target_triples):
+    def find_triples_by_patterns(self, term_id, target_triples):
         siblings_dict = dict()
         siblings_num = 0
         for target_triple in target_triples:
-            query = Query(term_id, target_triple)
+            query = PatternSearchQuery(term_id, target_triple)
             siblings = query.find_triples(self.engine, strict=False)
             siblings = filter(lambda tr: not self.is_light_triple(tr), siblings)
             siblings_num += len(siblings)
             pattern_freq = sum([triple[-1] for triple in siblings])
             for sibling in siblings:
-                source_id = sibling[query.source_term_pos]
+                source_id = sibling[query.key_term_i]
                 if source_id >= 0:
                     if source_id in siblings_dict:
                         siblings_dict[source_id].append((target_triple, sibling, pattern_freq))
@@ -141,8 +140,8 @@ class TripleStoreExplorer(object):
         logging.info("MAPPED %d/%d STOP TERMS" % (len(stop_terms_ids), len(stop_list_obj.stop_words)))
         for term in stop_list_obj.stop_words:
             term_id = self.engine.term_id_map.get(term, -1)
-            if term_id == -1:
-                logging.info("TERM NOT FOUND IN INDEX: %s" % term)
+            # if term_id == -1:
+            #     logging.info("TERM NOT FOUND IN INDEX: %s" % term)
         stop_terms_ids.add(-1)
         return stop_terms_ids
 
@@ -178,7 +177,7 @@ class TripleStoreExplorer(object):
         print "\tAFTER FILTERING (f>=%f): %d" % (threshold, len(target_triples))
         target_triples = filter(lambda tr: not self.is_light_triple(tr), target_triples)
         print "\tAFTER IGNORING LIGHT TRIPLES: %d" % len(target_triples)
-        source_triples, source_triple_num = self.find_source_triples(target_term_id, target_triples)
+        source_triples, source_triple_num = self.find_triples_by_patterns(target_term_id, target_triples)
         print "\tFOUND SOURCE TRIPLES FOR %s: %d" % (term, source_triple_num)
         potential_sources = []
         stops_ignored = 0

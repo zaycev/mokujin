@@ -10,6 +10,7 @@
 import gc
 import leveldb
 import logging
+import StringIO
 import marshal as pickle
 import mokujin.triples as mtr
 
@@ -88,13 +89,13 @@ class TripleIndex(object):
     def __init__(self, data_dir):
         # term = str()
         # triple = str()
-        # stamp(triple) = (int)
+        # args(triple) = (int)
         self.data_dir = data_dir
         # table: id(term) -> term
         self.term_id_map = None
-        # table: id(triple) -> stamp(triple)
+        # table: id(triple) -> args(triple)
         self.triple_id_map = None
-        # table: id(term) -> stamp(triple)
+        # table: id(term) -> args(triple)
         self.arg_cache = None
         self.rel_id_map = REL_ID_MAP
         self.id_rel_map = ID_REL_MAP
@@ -349,6 +350,15 @@ class TripleSearchEngine(object):
             triple_str += " %d>" % triple[-1]
             print triple_str
 
+    def pprint(self, triple):
+        pstr = StringIO.StringIO()
+        pstr.write("{")
+        pstr.write(ID_REL_MAP[triple[0]])
+        pstr.write(";")
+        terms = ";".join([self.id_term_map[term_id] if term_id >= 0 else "NONE" for term_id in triple[1:-1]])
+        pstr.write(terms)
+        pstr.write("}")
+        return pstr.getvalue()
 
 class SimpleObjectIndex(object):
 
