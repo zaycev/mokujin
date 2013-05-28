@@ -42,18 +42,13 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--stoplist", default="resources/word.freq.ru.csv", help="Stop list file", type=str)
     parser.add_argument("-ts", "--t_stop", default=500, help="Stop words frequency threshold", type=float)
     parser.add_argument("-tt", "--t_triple", default=5, help="Min frequency treshold for target triples", type=float)
-    parser.add_argument("-k", "--k_top", default=100, help="Number of first top patterns to output. Specify 0 to output all "
-                                                           "found patterns", type=int)
+    parser.add_argument("-mp", "--max_patterns", default=100, help="Number of first top patterns to output. Specify 0 "
+                                                                   "to output all found patterns", type=int)
+    parser.add_argument("-mt", "--max_terms", default=100, help="Number of first top terms for each pattern. Specify 0 "
+                                                                "to output all found patterns", type=int)
     parser.add_argument("-z", "--compress", default=1, choices=(0, 1), help="Compress output plk", type=int)
     parser.add_argument("-f", "--format", default="all", choices=("pkl", "txt", "all"),
                         help="Output format", type=str)
-    parser.add_argument("-c", "--conceptnet", default="resources/conceptnet.ru.csv",
-                        help="Path to the conceptnet file", type=str)
-    parser.add_argument("-r", "--cn_rel", default="cds", type=str,
-                        help="Types of concept net relation which should be filtered: \n"
-                             "'c' for ConceptuallyRelatedTo\n"
-                             "'d' for DerivedFrom\n"
-                             "'s' for Synonym")
     parser.add_argument("-m", "--normalize", default=1, choices=(0, 1), help="Normalize patterns frequency", type=int)
     parser.add_argument("-b", "--debug", default=1, choices=(0, 1), help="Write debug output", type=int)
 
@@ -69,11 +64,10 @@ if __name__ == "__main__":
     logging.info("STOP LIST: %s" % args.stoplist)
     logging.info("STOP WORDS FREQ THRESHOLD: %f" % args.t_stop)
     logging.info("TRIPLES FREQ THRESHOLD: %f" % args.t_triple)
-    logging.info("OUTPUT K FIRST SOURCES: k=%d" % args.k_top)
+    logging.info("OUTPUT MAX PATTERNS: k=%d" % args.max_patterns)
+    logging.info("OUTPUT MAX TERMS PER PATTERN: k=%d" % args.max_terms)
     logging.info("USE PKL COMPRESSION: %r (%s)" % (args.compress, comp_format))
     logging.info("OUTPUT FORMAT: %s" % args.format)
-    logging.info("CONCEPT NET FILE: %s" % args.conceptnet)
-    logging.info("CONCEPT NET RELATIONS: %s" % args.cn_rel)
 
     logging.info("LOADING INDEX")
     indexer = TripleIndex(args.index)
@@ -83,10 +77,7 @@ if __name__ == "__main__":
         stop_list = StopList.load(args.stoplist, threshold=args.t_stop, engine=engine)
     else:
         stop_list = StopList([])
-    if args.conceptnet and args.cn_rel:
-        concept_net = ConceptNetList.load(args.conceptnet, rels=args.cn_rel, engine=engine)
-    else:
-        concept_net = ConceptNetList([])
+    concept_net = ConceptNetList([])
 
     explorer = TripleStoreExplorer(engine, stop_terms=stop_list, concept_net=concept_net)
     
@@ -119,7 +110,6 @@ if __name__ == "__main__":
             pattern_collection.sort(key=lambda pattern: -pattern.freq)
     
         output_name = transliterate_ru(term)
-
     
         if args.debug == 1:
             debug_fl_path = "%s/%s.debug.txt" % (args.outputdir, output_name)
@@ -138,10 +128,12 @@ if __name__ == "__main__":
         matrix_fl = open(matrix_fl_path, "wb")
         patterns_fl = open(patterns_fl_path, "wb")
         terms_fl = open(terms_fl_path, "wb")
-    
-    
-        pattern_collection.output_matrix(engine, matrix_fl, patterns_fl, terms_fl)
-    
+        pattern_collection.output_matrix(engine,
+                                         matrix_fl,
+                                         patterns_fl,
+                                         terms_fl,
+                                         max_patters=args.max_patterns,
+                                         max_terms=args.max_terms)
         matrix_fl.close()
         patterns_fl.close()
         terms_fl.close()

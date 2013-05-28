@@ -94,7 +94,7 @@ class PatternCollection(object):
                 o_file.write("%s(f=%d,c=%d,nf=%.8f) " % (engine.id_term_map[term_id], term_freq, tr_count, norm_freq))
             o_file.write("\n")
     
-    def output_matrix(self, engine, matrix_fl, patterns_fl, terms_fl, norm=1):
+    def output_matrix(self, engine, matrix_fl, patterns_fl, terms_fl, norm=1, max_patters=100, max_terms=100):
         
         sparse_matrix = dict()
 
@@ -102,6 +102,8 @@ class PatternCollection(object):
         index_pattern_key_map = dict()
         term_id_index_map = dict()  # term_id -> column map
         index_term_id_map = dict()  # column -> term_id map
+
+        self.patterns = self.patterns[0:min(max_patters, len(self.patterns))]
         
         for pattern in self.patterns:
             column = dict()
@@ -111,8 +113,9 @@ class PatternCollection(object):
                 index_pattern_key_map[pattern_index] = pattern
             else:
                 pattern_index = pattern_key_index_map[pattern.key]
-            
-            for term_id, freq, count, norm_freq in pattern.terms:
+
+            terms = pattern.terms[0:min(max_terms, len(pattern.terms))]
+            for term_id, freq, count, norm_freq in terms:
                 
                 if term_id not in term_id_index_map:
                     term_index = len(term_id_index_map)
@@ -130,9 +133,8 @@ class PatternCollection(object):
             
             sparse_matrix[pattern_index] = column
 
-
         logging.info("OUTPUT TERMS IDs (%s) TO %r" % (len(term_id_index_map), terms_fl))
-        for i in xrange(len(term_id_index_map)):
+        for i in xrange(len(index_term_id_map)):
             term_id = index_term_id_map[i]
             terms_fl.write("%d,%s\n" % (i, engine.id_term_map[term_id]))
 
