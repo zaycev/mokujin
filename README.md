@@ -6,7 +6,7 @@ A language-agnostic toolset for semantic triples extraction and processing.
 
 * Python 2.7.X
 * LevelDB
-* LZ4
+* LZ4 (optional)
 * Django 1.5 (optional)
 
 ### Quick Start:
@@ -67,9 +67,23 @@ A language-agnostic toolset for semantic triples extraction and processing.
     python findsources.py -i triples-index-dir -o output-dir -q query.json
     ```
 
-6. Prepare file with list of sources: 
+6. Prepare file with list of sources (each on separate string):
 
-## Relation Extractor
+    ```
+    source_1
+    source_2
+    ...
+    source_n
+    ```
+
+7. Run `findpatterns.py` to find patterns:
+
+    ```
+    python findpatterns.py -i triples-index-dir -o output-dir -qf sources.txt
+    ```
+
+
+## Relation Triples Extractor
 
 Usage:
 
@@ -159,4 +173,6 @@ subj_verb_dirobj,<NONE>,обратить-VB,внимание-NN,<->,<->,64583
 noun_adj,житель-NN,местный-ADJ,<->,<->,<->,17450
 ```
 
-## Mapping Instances to Classes
+## Triples Indexer
+## Sources Finder
+## Patterns Finder
