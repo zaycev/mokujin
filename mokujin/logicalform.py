@@ -165,6 +165,7 @@ class Predicate(object):
 
     @staticmethod
     def fromstr(line):
+        # print line
         result = line.split(":")
         if len(result) != 2:
             pid = result[0]
@@ -178,6 +179,7 @@ class Predicate(object):
             lemma = "-".join(result[0:len(result) - 1])
         else:
             lemma, other = result
+        # print line.encode("utf-8")
         pos, arg_line = other.split("(")
         arg_line = arg_line[0:(len(arg_line) - 1)]
         args = arg_line.split(",")
@@ -365,9 +367,14 @@ class Sentence(object):
     @staticmethod
     def from_lf_line(lf_line_index, lf_line):
         predicates = []
+        # lf_line = lf_line.replace(" ", "")
+        # predicate_str = lf_line.split("&")
         predicate_str = filter(lambda t: t != "&", lf_line.split(" "))
+        # print lf_line
+        # print predicate_str
         for i, p_str in enumerate(predicate_str):
             if p_str[0] == "[":
+                # print lf_line.encode("utf-8")
                 predicate = Predicate.fromstr(p_str)
                 if predicate.lemma and predicate.pos.pos:
                     predicates.append(predicate)
@@ -394,8 +401,13 @@ class MetaphorAdpLF_Reader(object):
         for line in self.lf_file:
             line = line.decode("utf-8")
             if line[0] == "%":
-                text = line[2:len(line)]
-            elif line[0:3] == "id(":
+                if len(line) >= 3 and line[0:3] == "%%%":
+                    text = line[4:len(line)]
+                else:
+                    text = line[2:len(line)]
+            elif len(line) >= 3 and line[0:3] == "id(":
+                continue
+            elif line[0].isdigit():
                 continue
             elif len(line) > 1:
                 sentence = Sentence.from_lf_line(i, line)

@@ -360,6 +360,7 @@ class TripleSearchEngine(object):
         pstr.write("}")
         return pstr.getvalue()
 
+
 class SimpleObjectIndex(object):
 
     def __init__(self, data_dir, obj_to_terms, obj_to_str, str_to_obj):
