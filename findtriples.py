@@ -13,19 +13,8 @@ from mokujin.logicalform import MetaphorAdpLF_Reader
 from mokujin.triples import TripleExtractor, TripleFold, Triple
 from mokujin.triples import ACTUAL_RELS as RELS
 
-_ = """
-  __  __  ___  _  ___   _     _ ___ _   _
- |  \/  |/ _ \| |/ / | | |   | |_ _| \ | |
- | |\/| | | | | ' /| | | |_  | || ||  \| |
- | |  | | |_| | . \| |_| | |_| || || |\  |
- |_|  |_|\___/|_|\_\\\\___/ \___/|___|_| \_|
-
-"""
-
 
 if __name__ == "__main__":
-
-    print _
 
     if len(sys.argv) > 1:
         ifile = open(sys.argv[1], "r")
