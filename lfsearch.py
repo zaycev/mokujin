@@ -7,6 +7,14 @@
 # For more information, see README.md
 # For license information, see LICENSE
 
+"""
+Simple utile that can be used to test LF-index functionallyty and explore LF-index.
+
+Usage:
+    
+    python lfsearch.py -i lf-index-dir -q query-term  # will output all LF-sentences containing the query term.
+"""
+
 
 import sys
 import logging
@@ -23,7 +31,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--index", default="lfindex", help="LF sentences index directory", type=str)
+    parser.add_argument("-i", "--index", default="lf-index", help="LF sentences index directory", type=str)
     parser.add_argument("-o", "--output", default=None, type=str)
     parser.add_argument("-q", "--query", default=None, type=str)
     args = parser.parse_args()
