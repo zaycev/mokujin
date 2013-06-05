@@ -10,6 +10,8 @@
 """
 This script extracts relations triples from input LF-sentences count their frequencies and outputs
 the triples with the frequencies in descending order.
+
+DO NOT TRY TO USE THIS TO EXTRACT SOURCE WORDS
 """
 
 import sys
