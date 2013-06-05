@@ -14,6 +14,9 @@ from mokujin import numencode
 
 
 class TestNumCode(unittest.TestCase):
+    """
+    Test class for mokujin.numencode module.
+    """
 
     def setUp(self):
         self.seq = range(10)
