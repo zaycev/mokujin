@@ -7,6 +7,11 @@
 # For more information, see README.md
 # For license information, see LICENSE
 
+"""
+This script extracts relations triples from input LF-sentences count their frequencies and outputs
+the triples with the frequencies in descending order.
+"""
+
 import sys
 
 from mokujin.logicalform import MetaphorAdpLF_Reader
