@@ -8,7 +8,7 @@
 # For license information, see LICENSE
 
 """
-This is a django bootstrap files for triple store web GUI (currently broken).
+This is a django bootstrap file for triple store web GUI (currently broken).
 """
 
 import os
