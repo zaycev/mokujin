@@ -15,6 +15,7 @@ DO NOT TRY TO USE THIS TO EXTRACT SOURCE WORDS
 """
 
 import sys
+import logging
 
 from mokujin.logicalform import MetaphorAdpLF_Reader
 from mokujin.triples import TripleExtractor, TripleFold, Triple
@@ -22,6 +23,9 @@ from mokujin.triples import ACTUAL_RELS as RELS
 
 
 if __name__ == "__main__":
+    
+    logging.basicConfig(level=logging.INFO)
+    logging.info("PLEASE, DO NOT TRY TO USE THIS SCRIPT TO EXTRACT SOURCE WORDS, USE findsources.py INSTEAD")
 
     if len(sys.argv) > 1:
         ifile = open(sys.argv[1], "r")
