@@ -1,4 +1,0 @@
-source	sum_of_source_norm_freq	sum_of_target_norm_freq	number_of_triples	total_pattern_source_triple_freq	total_pattern_target_triple_freq	triples
-кусок&&марс	0.25000000	10.75000000	1	1	42	{кусок&&марс;сломанный;0.250000} 
-трактир	0.25000000	10.75000000	1	1	42	{трактир;сломанный;0.250000} 
-крест&&хозяин	0.25000000	10.75000000	1	1	42	{крест&&хозяин;сломанный;0.250000} 
