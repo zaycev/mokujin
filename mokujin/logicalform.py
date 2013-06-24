@@ -72,27 +72,27 @@ class Pos(object):
 
     def __init__(self, pos_tag=None):
         self.pos = POS.NONE
-        if pos_tag == "vb":
+        if pos_tag == "vb" or pos_tag == "v":
             self.vb = True
             self.pos = POS.VB
         else:
             self.vb = False
-        if pos_tag == "nn":
+        if pos_tag == "nn" or pos_tag == "n":
             self.nn = True
             self.pos = POS.NN
         else:
             self.nn = False
-        if pos_tag == "adj":
+        if pos_tag == "adj" or pos_tag == "a":
             self.adj = True
             self.pos = POS.ADJ
         else:
             self.adj = False
-        if pos_tag == "rb":
+        if pos_tag == "rb" or pos_tag == "r":
             self.rb = True
             self.pos = POS.RB
         else:
             self.rb = False
-        if pos_tag == "in":
+        if pos_tag == "in" or pos_tag == "p":
             self.prep = True
             self.pos = POS.PREP
         else:
@@ -165,7 +165,6 @@ class Predicate(object):
 
     @staticmethod
     def fromstr(line):
-        # print line
         result = line.split(":")
         if len(result) != 2:
             pid = result[0]
@@ -179,7 +178,6 @@ class Predicate(object):
             lemma = "-".join(result[0:len(result) - 1])
         else:
             lemma, other = result
-        # print line.encode("utf-8")
         pos, arg_line = other.split("(")
         arg_line = arg_line[0:(len(arg_line) - 1)]
         args = arg_line.split(",")
@@ -367,14 +365,16 @@ class Sentence(object):
     @staticmethod
     def from_lf_line(lf_line_index, lf_line):
         predicates = []
-        # lf_line = lf_line.replace(" ", "")
-        # predicate_str = lf_line.split("&")
-        predicate_str = filter(lambda t: t != "&", lf_line.split(" "))
-        # print lf_line
-        # print predicate_str
+        
+        lf_line = lf_line.replace(" & ", "&")
+        lf_line = lf_line.replace("((", "(")
+        lf_line = lf_line.replace("))", ")")
+        
+        
+        predicate_str = lf_line.split("&")
+        predicate_str = filter(lambda t: t != "&", predicate_str)
         for i, p_str in enumerate(predicate_str):
             if p_str[0] == "[":
-                # print lf_line.encode("utf-8")
                 predicate = Predicate.fromstr(p_str)
                 if predicate.lemma and predicate.pos.pos:
                     predicates.append(predicate)
