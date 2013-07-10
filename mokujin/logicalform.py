@@ -173,7 +173,7 @@ class Predicate(object):
             other = "".join(other)
         else:
             pid, other = line.split(":")
-        # print other
+        # print other.encode("utf-8")
         result = other.split("-")
         # print result
         if len(result) != 2:
@@ -405,22 +405,25 @@ class MetaphorAdpLF_Reader(object):
         i = 0
         text = None
         for line in self.lf_file:
-            # print
-            # print line
-            line = line.decode("utf-8")
-            if line[0] == "%":
-                if len(line) >= 3 and line[0:3] == "%%%":
-                    text = line[4:len(line)]
+            try:
+                # print
+                # print line
+                line = line.decode("utf-8")
+                if line[0] == "%":
+                    if len(line) >= 3 and line[0:3] == "%%%":
+                        text = line[4:len(line)]
+                    else:
+                        text = line[2:len(line)]
+                elif len(line) >= 3 and line[0:3] == "id(":
+                    continue
+                elif line[0].isdigit():
+                    continue
+                elif len(line) > 1:
+                    sentence = Sentence.from_lf_line(i, line)
+                    sentence.raw_text = text
+                    i += 1
+                    yield sentence
                 else:
-                    text = line[2:len(line)]
-            elif len(line) >= 3 and line[0:3] == "id(":
-                continue
-            elif line[0].isdigit():
-                continue
-            elif len(line) > 1:
-                sentence = Sentence.from_lf_line(i, line)
-                sentence.raw_text = text
-                i += 1
-                yield sentence
-            else:
+                    continue
+            except:
                 continue
