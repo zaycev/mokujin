@@ -166,13 +166,16 @@ class Predicate(object):
     @staticmethod
     def fromstr(line):
         result = line.split(":")
+        # print result
         if len(result) != 2:
             pid = result[0]
             other = result[1:len(result)]
             other = "".join(other)
         else:
             pid, other = line.split(":")
+        # print other
         result = other.split("-")
+        # print result
         if len(result) != 2:
             other = result[-1]
             lemma = "-".join(result[0:len(result) - 1])
@@ -181,6 +184,7 @@ class Predicate(object):
         pos, arg_line = other.split("(")
         arg_line = arg_line[0:(len(arg_line) - 1)]
         args = arg_line.split(",")
+        # print "\n\n\n"
         return Predicate(pid, lemma, pos, args)
 
     @staticmethod
@@ -366,7 +370,9 @@ class Sentence(object):
     def from_lf_line(lf_line_index, lf_line):
         predicates = []
         
-        lf_line = lf_line.replace(" & ", "&")
+        lf_line = lf_line.replace(" & ", "<<<AND>>>")
+        lf_line = lf_line.replace("&", "")
+        lf_line = lf_line.replace("<<<AND>>>", "&")
         lf_line = lf_line.replace("((", "(")
         lf_line = lf_line.replace("))", ")")
         
@@ -399,6 +405,8 @@ class MetaphorAdpLF_Reader(object):
         i = 0
         text = None
         for line in self.lf_file:
+            # print
+            # print line
             line = line.decode("utf-8")
             if line[0] == "%":
                 if len(line) >= 3 and line[0:3] == "%%%":
