@@ -108,7 +108,8 @@ if __name__ == "__main__":
                 fl.close()
 
             if args.format == "txt" or args.format == "all":
-                fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, transliterate_ru(term)), "wb")
+                file_name = transliterate_ru(unicode(term))
+                fl = open("%s/%s_%s.txt" % (args.outputdir, domain.label, file_name), "wb")
                 fl.write("source"
                          "\tsum_of_source_norm_freq"
                          "\tsum_of_target_norm_freq"
