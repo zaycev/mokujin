@@ -61,4 +61,4 @@ import unidecode
 def transliterate_ru(string):
     if isinstance(string, unicode):
         return unidecode.unidecode(string)
-    return unidecode.unidecode(unicode(string))
+    return unidecode.unidecode(string.decode("utf-8"))
