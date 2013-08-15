@@ -7,6 +7,8 @@
 # For more information, see README.md
 # For license information, see LICENSE
 
+import logging
+
 
 class POS(object):
 
@@ -374,14 +376,20 @@ class Sentence(object):
         predicate_str = lf_line.split("&")
         predicate_str = filter(lambda t: t != "&", predicate_str)
         for i, p_str in enumerate(predicate_str):
-            if p_str[0] == "[":
-                predicate = Predicate.fromstr(p_str)
-                if predicate.lemma and predicate.pos.pos:
-                    predicates.append(predicate)
-            else:
-                predicate = Predicate.efromstr(p_str)
-                if len(predicate.extra) > 0:
-                    predicates.append(predicate)
+            try:
+                if p_str[0] == "[":
+                    predicate = Predicate.fromstr(p_str)
+                    if predicate.lemma and predicate.pos.pos:
+                        predicates.append(predicate)
+                else:
+                    predicate = Predicate.efromstr(p_str)
+                    if len(predicate.extra) > 0:
+                        predicates.append(predicate)
+            except Exception:
+                try:
+                    logging.error("Error while parsing line: %s" % lf_line)
+                except:
+                    pass
 
         return Sentence(lf_line_index, predicates, lf_line)
 
