@@ -55,6 +55,12 @@ if __name__ == "__main__":
                              "'c' for ConceptuallyRelatedTo\n"
                              "'d' for DerivedFrom\n"
                              "'s' for Synonym")
+    parser.add_argument("-lm", "--lda_model", default=None, type=str,
+                        help="A path to GENSIM LDA model file.")
+    parser.add_argument("-ld", "--lda_dict", default=None, type=str,
+                        help="A path to GENSIM LDA model dictionary file.")
+    parser.add_argument("-lt", "--lda_threshold", default=0.5, type=float,
+                        help="LDA filter threshold. Default is 0.5")
 
     args = parser.parse_args()
 
@@ -68,7 +74,19 @@ if __name__ == "__main__":
     logging.info("USE PKL COMPRESSION: %r (%s)" % (args.compress, comp_format))
     logging.info("OUTPUT FORMAT: %s" % args.format)
     logging.info("CONCEPT NET FILE: %s" % args.conceptnet)
-    logging.info("CONCEPT NET RELATIONS: %s" % args.cn_rel)
+    logging.info("LDA MODEL: %s" % args.lda_model)
+    logging.info("LDA DICT: %s" % args.lda_dict)
+    logging.info("LDA THRESHOLD: %s" % args.lda_threshold)
+
+    if args.lda_model is not None and args.lda_dict is not None and args.lda_threshold > 0:
+        from mokujin.filters import lda_similarity
+        from gensim import corpora
+        from gensim import models
+        lda_model = models.ldamodel.LdaModel.load(args.lda_model)
+        lda_dict = corpora.Dictionary.load(args.lda_dict)
+        lda_threshold = args.lda_threshold
+    else:
+        lda_model = None
 
     stop_list = None
     concept_net = None
@@ -87,6 +105,7 @@ if __name__ == "__main__":
     for domain in query:
         logging.info("PROCESSING DOMAIN: %s (%d target terms)" % (domain.label, len(domain.target_terms)))
         for term in domain.target_terms:
+            target_term = term
             sources = explorer.find_potential_sources(term, threshold=args.t_triple)
 
             if sources is None:
@@ -119,6 +138,16 @@ if __name__ == "__main__":
                          "\ttriples"
                          "\n")
                 for source in sources:
+
+                    if lda_model is not None:
+                        source_term = explorer.engine.id_term_map[source.source_id]
+                        similarity = lda_similarity(target_term,
+                                                    source_term,
+                                                    lda_dict,
+                                                    lda_model)
+                        if similarity < lda_threshold:
+                            continue
+
                     fl.write("%s\n" % explorer.format_source_output_line(source))
                 print
                 fl.close()
