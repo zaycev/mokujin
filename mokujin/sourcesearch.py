@@ -166,6 +166,9 @@ class TripleStoreExplorer(object):
         """
 
         target_term_id = self.engine.term_id_map.get(term)
+
+        print "%r" % target_term_id, term
+
         if target_term_id is None:
             return None
         target_triples = self.engine.search(arg_query=(target_term_id,))

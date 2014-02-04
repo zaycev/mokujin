@@ -23,7 +23,7 @@ import argparse
 
 from cPickle import loads
 from findsources import decompress
-from mokujin.index import TripleIndex
+from mokujin.index import DepTupleIndex
 from mokujin.index import TripleSearchEngine
 from mokujin.sourcematrix import extract_source_matrix
 
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     patterns_fl = open(patterns_fl, "w")
 
     logging.info("LOADING INDEX")
-    indexer = TripleIndex(args.data)
+    indexer = DepTupleIndex(args.data)
     engine = TripleSearchEngine(indexer)
 
     sources = input_fl.read()

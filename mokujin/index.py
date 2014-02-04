@@ -8,7 +8,9 @@
 # For license information, see LICENSE
 
 import gc
-import leveldb
+import os
+import lz4
+import plyvel
 import logging
 import StringIO
 import marshal as pickle
@@ -84,216 +86,237 @@ class TripleReader(object):
             yield triple
 
 
-class TripleIndex(object):
+class DepTupleIndex(object):
+    """
+    Dependency relation tuple indexer.
 
-    def __init__(self, data_dir):
-        # term = str()
-        # triple = str()
-        # args(triple) = (int)
-        self.data_dir = data_dir
-        # table: id(term) -> term
-        self.term_id_map = None
-        # table: id(triple) -> args(triple)
-        self.triple_id_map = None
-        # table: id(term) -> args(triple)
-        self.arg_cache = None
-        self.rel_id_map = REL_ID_MAP
-        self.id_rel_map = ID_REL_MAP
-        try:
-            import lz4 as compressor
-            self.compress = compressor.compress
-            self.compressHC = compressor.compressHC
-            self.decompress = compressor.decompress
-        except ImportError:
-            import zlib as compressor
-            self.compress = lambda data: compressor.compress(data, 3)
-            self.compressHC = lambda data: compressor.compress(data, 9)
-            self.decompress = lambda data: compressor.decompress(data)
+    This class stores
+
+    """
+
+    TUPLE_INDEX_DB_BLOCK_SIZE = 64
+    TERM_INDEX_DB_BLOCK_SIZE  = 256
+    PLIST_CACHE_SIZE          = 256000
+    STRING_ARRAY_SEP          = chr(244)
+
+    def __init__(self, index_root):
+        self.index_root = index_root
+
+        self.term_ldb   = DepTupleIndex.get_term_ldb(index_root, create=False)
+        self.plist_ldb  = DepTupleIndex.get_plist_ldb(index_root, create=False)
+        self.tuple_ldb  = DepTupleIndex.get_tuple_ldb(index_root, create=False)
+
+        self.term2id    = {}
+        self.id2term    = {}
+        self.id2tuple   = {}
+        self.reltype2id = REL_ID_MAP
+        self.id2reltype = ID_REL_MAP
+
+        DepTupleIndex.load_terms(self.term_ldb, self.id2term, self.term2id)
+        DepTupleIndex.load_tuples(self.tuple_ldb, self.id2tuple)
 
     @staticmethod
-    def triple2stamp(triple, term_id_map):
-        rel_name = triple[0]
-        rel_id = REL_ID_MAP[rel_name]
-        args = triple[1]
-        stamp = [rel_id]
+    def tuple2stamp(d_tuple, term2id):
+        args = d_tuple[1]
+        stamp = [REL_ID_MAP[d_tuple[0]]]
         for arg in args:
             if arg == ArgType.NONE:
                 stamp.append(arg)
             elif arg != ArgType.EMPTY:
-                stamp.append(term_id_map[arg])
-        stamp.append(triple[-1])
+                stamp.append(term2id[arg])
+        stamp.append(d_tuple[-1])
         return tuple(stamp)
 
     @staticmethod
-    def stamp2triple(stamp, id_term_map, map_none=False):
-        triple = [ID_REL_MAP[stamp[0]]]
+    def stamp2tuple(stamp, id2term, map_none=False):
+        d_tuple = [ID_REL_MAP[stamp[0]]]
         for i in range(1, len(stamp) - 1):
             if stamp[i] >= 0:
-                triple.append(id_term_map[stamp[i]])
+                d_tuple.append(id2term[stamp[i]])
             else:
                 if map_none:
-                    triple.append("<NONE>")
+                    d_tuple.append("<NONE>")
                 else:
-                    triple.append(stamp[i])
-        triple.append(stamp[-1])
-        return triple
+                    d_tuple.append(stamp[i])
+        d_tuple.append(stamp[-1])
+        return d_tuple
 
     @staticmethod
     def stamp_arg(stamp):
         return stamp[1: len(stamp) - 1]
 
-    def __commit_triples(self, batch_size=64):
-        triple_store = leveldb.LevelDB("%s/triple.db" % self.data_dir)
-        batch = []
-        tr_id = 0
-        batch_key = 0
-        while tr_id < len(self.triple_id_map):
-            batch.append(self.triple_id_map[tr_id])
-            if tr_id % batch_size == batch_size - 1:
-                batch_data = self.compressHC(pickle.dumps(batch))
-                triple_store.Put(numencode.encode_uint(batch_key), batch_data)
-                batch = []
-                batch_key += 1
-            tr_id += 1
-        if len(batch) > 0:
-            batch_data = self.compressHC(pickle.dumps(batch))
-            triple_store.Put(numencode.encode_uint(batch_key), batch_data)
+    @staticmethod
+    def get_tuple_ldb(index_root, create=False):
+        db_path = os.path.join(index_root, "tuple.ldb")
+        return plyvel.DB(db_path,
+                         compression="snappy",
+                         write_buffer_size=1024 * (1024 ** 2),  # 1 GB
+                         block_size=512 * (1024 ** 2),          # 512 MB
+                         bloom_filter_bits=8,
+                         create_if_missing=create,
+                         error_if_exists=create)
 
-    def load_triples(self, batch_size=64):
-        id_triple_map = dict()
-        triple_store = leveldb.LevelDB("%s/triple.db" % self.data_dir)
-        for batch_key, batch_data in triple_store.RangeIter():
-            batch = pickle.loads(self.decompress(batch_data))
-            batch_key = numencode.decode_uint(batch_key)
-            for i in xrange(len(batch)):
-                tr_id = batch_key * batch_size + i
-                id_triple_map[tr_id] = batch[i]
-        logging.info("INDEX: LOADED %d TRIPLES" % len(id_triple_map))
-        return id_triple_map
+    @staticmethod
+    def get_term_ldb(index_root, create=False):
+        db_path = os.path.join(index_root, "term.ldb")
+        return plyvel.DB(db_path,
+                         compression="snappy",
+                         write_buffer_size=1024 * (1024 ** 2),  # 1 GB
+                         block_size=512 * (1024 ** 2),          # 512 MB
+                         bloom_filter_bits=8,
+                         create_if_missing=create,
+                         error_if_exists=create)
 
-    def __commit_terms(self, batch_size=64):
-        term_store = leveldb.LevelDB("%s/term.db" % self.data_dir)
-        batch = []
-        term_id = 0
-        batch_key = 0
-        while term_id < len(self.term_id_map):
-            batch.append(self.id_term_map[term_id])
-            if term_id % batch_size == batch_size - 1:
-                batch_data = self.compressHC(pickle.dumps(batch))
-                term_store.Put(numencode.encode_uint(batch_key), batch_data)
-                batch = []
-                batch_key += 1
-            term_id += 1
-        if len(batch) > 0:
-            batch_data = self.compressHC(pickle.dumps(batch))
-            term_store.Put(numencode.encode_uint(batch_key), batch_data)
+    @staticmethod
+    def get_plist_ldb(index_root, create=False):
+        db_path = os.path.join(index_root, "plist.ldb")
+        return plyvel.DB(db_path,
+                         compression="snappy",
+                         write_buffer_size=1024 * (1024 ** 2),  # 1 GB
+                         block_size=512 * (1024 ** 2),          # 512 MB
+                         bloom_filter_bits=8,
+                         create_if_missing=create,
+                         error_if_exists=create)
 
-    def load_terms(self, batch_size=64):
-        id_term_map = dict()
-        term_store = leveldb.LevelDB("%s/term.db" % self.data_dir)
-        for batch_key, batch_data in term_store.RangeIter():
-            batch = pickle.loads(self.decompress(batch_data))
-            batch_key = numencode.decode_uint(batch_key)
-            for i in xrange(len(batch)):
-                term_id = batch_key * batch_size + i
-                id_term_map[term_id] = batch[i]
-        logging.info("INDEX: LOADED %d TERMS" % len(id_term_map))
-        return id_term_map
+    @staticmethod
+    def write_tuples(id2tuple, tuple_ldb):
+        with tuple_ldb.write_batch() as wb:
+            for tuple_id, stamp in id2tuple.iteritems():
+                wb.put(str(tuple_id), pickle.dumps(stamp))
+        logging.info("Wrote %d tuples on disk." % len(id2tuple))
 
-    def decode_posting_list(self, plist_blob):
-        plist = numencode.decode_plist(self.decompress(plist_blob))
+    @staticmethod
+    def load_tuples(tuple_ldb, id2tuple):
+        for tuple_id_str, stamp_blob in tuple_ldb:
+            tuple_id = int(tuple_id_str)
+            id2tuple[tuple_id] = pickle.loads(stamp_blob)
+        logging.info("Loaded %d tuples into the memory." % len(id2tuple))
+
+    @staticmethod
+    def write_terms(term2id, term_ldb):
+        with term_ldb.write_batch() as wb:
+            for term, term_id in term2id.iteritems():
+                wb.put(str(term_id), term)
+        logging.info("Wrote %d terms on disk." % len(term2id))
+
+    @staticmethod
+    def load_terms(term_ldb, id2term, term2id):
+        for term_id_str, term in term_ldb:
+            term_id = int(term_id_str)
+            id2term[term_id] = term
+            term2id[term] = term_id
+        logging.info("Loaded %d terms into the memory." % len(id2term))
+
+    @staticmethod
+    def decode_posting_list(plist_blob):
+        plist = numencode.decode_plist(lz4.decompress(plist_blob))
         return plist
 
-    def encode_posting_list(self, plist):
-        return self.compressHC(numencode.encode_plist(plist))
+    @staticmethod
+    def encode_posting_list(plist):
+        return lz4.compressHC(numencode.encode_plist(plist))
 
-    def update_posting_list(self, old_plist_blob, new_plist):
-        plist_blob = self.decompress(old_plist_blob)
+    @staticmethod
+    def update_posting_list(old_plist_blob, new_plist):
+        plist_blob = lz4.decompress(old_plist_blob)
         updated_plist = numencode.update_plist(plist_blob, new_plist)
-        return self.compressHC(updated_plist)
+        return lz4.compressHC(updated_plist)
 
-    def __update_arg_index(self):
-        w_batch = leveldb.WriteBatch()
-        arg_index = leveldb.LevelDB("%s/arg.index" % self.data_dir)
-        for term_id, plist in self.arg_cache.iteritems():
-            term_key = numencode.encode_uint(term_id)
-            try:
-                old_plist_blob = arg_index.Get(term_key)
-            except KeyError:
-                old_plist_blob = None
-            if old_plist_blob is None:
-                plist_blob = self.encode_posting_list(plist)
-            else:
-                plist_blob = self.update_posting_list(old_plist_blob, plist)
-            w_batch.Put(term_key, plist_blob)
-        arg_index.Write(w_batch, sync=True)
-
-    def __cache_triple(self, triple_stamp):
-        tr_id = len(self.triple_id_map)
-        self.triple_id_map.append(triple_stamp)
-        return tr_id
-
-    def __cache_term(self, term):
-        if term not in self.term_id_map:
-            term_id = len(self.term_id_map)
-            self.id_term_map.append(term)
-            self.term_id_map[term] = term_id
-
-    def __cache_arg_posting_list(self, triple_id, stamp):
-        for i in range(1, len(stamp) - 1):
-            if stamp[i] >= 0:
-                if stamp[i] in self.arg_cache:
-                    self.arg_cache[stamp[i]].append((triple_id, i))
+    @staticmethod
+    def write_plists(plist_dict, plist_ldb, final_iteration=True):
+        plist_dict_dict = {}
+        with plist_ldb.write_batch() as wb:
+            for term_id, plist in plist_dict.iteritems():
+                if 50 <= len(plist) <= 100000 and not final_iteration:
+                    plist_dict_dict[term_id] = plist
+                    continue
+                term_key = numencode.encode_uint(term_id)
+                try:
+                    old_plist_blob = plist_ldb.get(term_key)
+                except KeyError:
+                    old_plist_blob = None
+                if old_plist_blob is None:
+                    plist_blob = DepTupleIndex.encode_posting_list(plist)
                 else:
-                    self.arg_cache[stamp[i]] = [(triple_id, i)]
+                    plist_blob = DepTupleIndex.update_posting_list(old_plist_blob, plist)
+                wb.put(term_key, plist_blob)
+        logging.info("Wrote %d posting lists on disk." % len(plist_dict))
+        return plist_dict_dict
 
-    def create_index(self, triples, threshold=10, cache_size=1000 ** 2):
-        i = 0
-        self.id_term_map = []
-        self.term_id_map = dict()
-        self.triple_id_map = []
-        self.arg_cache = dict()
+    @staticmethod
+    def create(index_root, tuples, freq_threshold=5):
+
+        id2term    = {}
+        term2id    = {}
+        id2tuple   = {}
+        plist_dict = {}
+
+        term_ldb   = DepTupleIndex.get_term_ldb(index_root, create=True)
+        plist_ldb  = DepTupleIndex.get_plist_ldb(index_root, create=True)
+        tuple_ldb  = DepTupleIndex.get_tuple_ldb(index_root, create=True)
+
         cached = 0
-        logging.info("starting creating index")
-        for triple in triples:
-            args = triple[1]
-            freq = triple[-1]
-            for term in args:
-                if isinstance(term, basestring):
-                    self.__cache_term(term)
-            stamp = self.triple2stamp(triple, self.term_id_map)
-            if freq > threshold:
-                i += 1
-                tr_id = self.__cache_triple(stamp)
-                self.__cache_arg_posting_list(tr_id, stamp)
-                cached += 1
-                if cached > cache_size:
-                    logging.info("%dM triples done, flushing cache" % i)
-                    self.__update_arg_index()
-                    cached = 0
-                    self.arg_cache = dict()
-                    gc.collect()
-        self.__commit_terms()
-        self.__commit_triples()
-        self.__update_arg_index()
-        self.arg_cache = dict()
-        self.term_id_map = dict()
-        self.triple_id_map = []
+        logging.info("Beginning creating index.")
 
-    def arg_index(self):
-        return leveldb.LevelDB("%s/arg.index" % self.data_dir)
+        for line_no, d_tuple in enumerate(tuples):
+
+            dep_arguments = d_tuple[1]
+            dep_frequency = d_tuple[-1]
+
+            if line_no % 25000 == 0:
+                logging.info("Indexing tuple #%d. Freq=%d." % (line_no, dep_frequency))
+
+            for term in dep_arguments:
+
+                # Skip special terms.
+                if term == -1 or term == -2:
+                    continue
+
+                # Add term to dictionary.
+                term_id = term2id.get(term, -1)
+                if term_id == -1:
+                    term_id = len(term2id)
+                    term2id[term] = term_id
+                    id2term[term_id] = term
+
+            # Get compact representation of dependency tuple.
+            stamp = DepTupleIndex.tuple2stamp(d_tuple, term2id)
+
+            if dep_frequency > freq_threshold:
+
+                # Generate ID for new tuple.
+                tuple_id = len(id2tuple)
+                id2tuple[tuple_id] = stamp
+
+                for arg_idx, arg in enumerate(stamp[1:-1]):
+                    if arg >= 0:
+                        arg_plist = plist_dict.get(arg)
+                        if arg_plist is None:
+                            plist_dict[arg] = [(tuple_id, arg_idx)]
+                        else:
+                            plist_dict[arg].append((tuple_id, arg_idx))
+
+                cached += 1
+                if cached == DepTupleIndex.PLIST_CACHE_SIZE:
+                    logging.info("Writing %d posting lists to disc." % len(plist_dict))
+                    plist_dict = DepTupleIndex.write_plists(plist_dict, plist_ldb, final_iteration=False)
+                    cached = 0
+
+                    gc.collect()
+
+        DepTupleIndex.write_terms(term2id, term_ldb)
+        DepTupleIndex.write_tuples(id2tuple, tuple_ldb)
+        DepTupleIndex.write_plists(plist_dict, plist_ldb, final_iteration=True)
 
 
 class TripleSearchEngine(object):
 
     def __init__(self, triple_index):
         self.index = triple_index
-        self.id_term_map = triple_index.load_terms()
-        self.term_id_map = dict()
-        self.id_triple_map = triple_index.load_triples()
-        for term_id, term in self.id_term_map.iteritems():
-            self.term_id_map[term] = term_id
-        self.arg_index = triple_index.arg_index()
+        self.id_term_map = triple_index.id2term
+        self.term_id_map = triple_index.term2id
+        self.id_triple_map = triple_index.id2tuple
+        self.arg_index = triple_index.plist_ldb
 
     def search(self, rel_type=None, arg_query=()):
         norm_query = []
@@ -320,7 +343,7 @@ class TripleSearchEngine(object):
         results = None
         for term_id, pos in norm_query:
             try:
-                plist_blob = self.arg_index.Get(numencode.encode_uint(term_id))
+                plist_blob = self.arg_index.get(numencode.encode_uint(term_id))
                 plist = self.index.decode_posting_list(plist_blob)
             except KeyError:
                 plist = []
@@ -381,7 +404,7 @@ class SimpleObjectIndex(object):
             self.compress = lambda data: compressor.compress(data, 3)
             self.compressHC = lambda data: compressor.compress(data, 9)
             self.decompress = lambda data: compressor.decompress(data)
-    
+
     def load_all(self):
         id_term_map = self.load_terms()
         self.id_term_map = [None] * len(id_term_map)
@@ -390,7 +413,7 @@ class SimpleObjectIndex(object):
             self.id_term_map[term_id] = term
             self.term_id_map[term] = term_id
         self.objnum = self.load_objnum()
-            
+
     def load_objnum(self):
         objnum_fl_path = "%s/OBJNUM" % self.data_dir
         try:
@@ -400,7 +423,7 @@ class SimpleObjectIndex(object):
             objnum = 0
         logging.info("LOADED DOCNUM %d" % objnum)
         return objnum
-    
+
     def update_objnum(self, new_objnum):
         objnum_fl_path = "%s/OBJNUM" % self.data_dir
         prev_objnum = self.load_objnum()
@@ -532,7 +555,7 @@ class SimpleObjectIndex(object):
         self.update_posting_lists(post_lists)
         self.write_terms(self.id_term_map)
         logging.info("index done")
-    
+
     def find(self, query_terms_cnf=None):
         for query_terms in query_terms_cnf:
             plist_store = leveldb.LevelDB("%s/plist.index" % self.data_dir)

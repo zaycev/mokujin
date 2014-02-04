@@ -10,7 +10,7 @@
 import logging
 import argparse
 
-from mokujin.index import TripleIndex
+from mokujin.index import DepTupleIndex
 from mokujin.resource import StopList
 from mokujin.misc import transliterate_ru
 from mokujin.resource import ConceptNetList
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     logging.info("OUTPUT FORMAT: %s" % args.format)
 
     logging.info("LOADING INDEX")
-    indexer = TripleIndex(args.index)
+    indexer = DepTupleIndex(args.index)
     engine = TripleSearchEngine(indexer)
 
     if args.stoplist:

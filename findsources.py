@@ -11,7 +11,7 @@ import logging
 import argparse
 import cPickle as pickle
 
-from mokujin.index import TripleIndex
+from mokujin.index import DepTupleIndex
 from mokujin.resource import StopList
 from mokujin.resource import ConceptNetList
 from mokujin.query import DomainSearchQuery
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     query = DomainSearchQuery.fromstring(open(args.queryfile).read())
     logging.info("LOADING INDEX")
-    indexer = TripleIndex(args.index)
+    indexer = DepTupleIndex(args.index)
     engine = TripleSearchEngine(indexer)
 
     explorer = TripleStoreExplorer(engine, stop_terms=stop_list, concept_net=concept_net)

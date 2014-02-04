@@ -12,8 +12,8 @@ import sys
 import logging
 import argparse
 
-from mokujin.index import TripleIndex
 from mokujin.index import TripleReader
+from mokujin.index import DepTupleIndex
 
 
 if __name__ == "__main__":
@@ -35,9 +35,9 @@ if __name__ == "__main__":
     logging.info("MIN FREQ: %d" % args.min_freq)
 
     reader = TripleReader()
-    index = TripleIndex(data_dir=o_dir)
+
 
     i_triples = reader.iter_triples(i_file)
-    index.create_index(i_triples, threshold=args.min_freq)
+    DepTupleIndex.create(index_root=o_dir, tuples=i_triples, freq_threshold=args.min_freq)
 
     logging.info("DONE")
