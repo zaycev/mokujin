@@ -53,27 +53,33 @@ class ConceptNetList(object):
 
     @staticmethod
     def load(file_path, rels=None, engine=None):
-        relations = []
-        with open(file_path, "rb") as fl:
-            reader = csv.reader(fl, delimiter=";")
-            for rel, arg1, arg2 in reader:
-                arg_and_pos = arg2.split("/")
-                if len(arg_and_pos) == 2:
-                    arg2, pos = arg_and_pos
-                else:
-                    arg2, pos = arg_and_pos[0], None
-                if rel == "ConceptuallyRelatedTo":
-                    rel_short = "c"
-                elif rel == "DerivedFrom":
-                    rel_short = "d"
-                elif rel == "Synonym":
-                    rel_short = "s"
-                else:
-                    rel_short = None
-                    print rel
-                if rel_short in rels:
-                    relations.append((ConceptNetList.rel_id_map[rel], arg1, arg2, pos))
-        logging.info("LOADED %d %s CONCEPTS" % (len(relations), rels))
+        try:
+            relations = []
+            with open(file_path, "rb") as fl:
+                reader = csv.reader(fl, delimiter=";")
+                for rel, arg1, arg2 in reader:
+                    arg_and_pos = arg2.split("/")
+                    if len(arg_and_pos) == 2:
+                        arg2, pos = arg_and_pos
+                    else:
+                        arg2, pos = arg_and_pos[0], None
+                    if rel == "ConceptuallyRelatedTo":
+                        rel_short = "c"
+                    elif rel == "DerivedFrom":
+                        rel_short = "d"
+                    elif rel == "Synonym":
+                        rel_short = "s"
+                    else:
+                        rel_short = None
+                        print rel
+                    if rel_short in rels:
+                        relations.append((ConceptNetList.rel_id_map[rel], arg1, arg2, pos))
+            logging.info("LOADED %d %s CONCEPTS" % (len(relations), rels))
+
+        except Exception:
+            logging.warning("Error when loading %s. Using empty ConcepNet." % file_path)
+            relations = []
+
         return ConceptNetList(relations, engine)
 
 
@@ -91,6 +97,7 @@ class StopList(object):
     @staticmethod
     def load(file_path, threshold=500.0, engine=None):
         stop_terms_set = set()
+
         try:
             with open(file_path, "rb") as csvfile:
                 stop_terms = csv.reader(csvfile, delimiter=",")
@@ -100,9 +107,12 @@ class StopList(object):
                         stop_terms_set.add(lemma)
                     else:
                         break
-        except IOError:
-            pass
-        logging.info("LOADED %d (f<=%f) STOP WORDS" % (len(stop_terms_set), threshold))
+            logging.info("LOADED %d (f<=%f) STOP WORDS" % (len(stop_terms_set), threshold))
+
+        except Exception:
+            stop_terms_set = []
+            logging.warning("Error when loading %s. Using empty ConcepNet." % file_path)
+
         return StopList(stop_terms_set, engine)
 
     def __contains__(self, item):
