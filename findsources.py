@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("-z", "--compress", default=1, choices=(0, 1), help="Compress output plk", type=int)
     parser.add_argument("-f", "--format", default="all", choices=("pkl", "txt", "all"),
                         help="Output format", type=str)
-    parser.add_argument("-c", "--conceptnet", default="resources/conceptnet.ru.csv",
+    parser.add_argument("-c", "--conceptnet", default=None,
                         help="Path to the conceptnet file", type=str)
     parser.add_argument("-r", "--cn_rel", default="cds", type=str,
                         help="Types of concept net relation which should be filtered: \n"
