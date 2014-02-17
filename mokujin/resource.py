@@ -111,7 +111,7 @@ class StopList(object):
 
         except Exception:
             stop_terms_set = []
-            logging.warning("Error when loading %s. Using empty ConcepNet." % file_path)
+            logging.warning("Error when loading %s. Using empty StopList." % file_path)
 
         return StopList(stop_terms_set, engine)
 
